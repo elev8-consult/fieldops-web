@@ -6,12 +6,14 @@ import { Pagination } from '@/components/ui/Pagination';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Table, type TableColumn } from '@/components/ui/Table';
+import api from '@/api/axios';
 import { useMessages } from '@/hooks/useMessages';
 import { formatConfidence, formatDateTime, formatRelative, getAxiosMessage } from '@/lib/utils';
-import type { WhatsappMessage } from '@/types';
+import type { Brand, WhatsappMessage } from '@/types';
 import { AlertTriangle, Eye, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useQuery } from '@tanstack/react-query';
 
 function aiConfidenceBarClass(v: number | null) {
   if (v == null) return 'bg-slate-200';
@@ -28,9 +30,19 @@ export function MessageLog() {
   const [status, setStatus] = useState('');
   const [reportType, setReportType] = useState('');
   const [senderPhone, setSenderPhone] = useState('');
+  const [brandId, setBrandId] = useState<string | undefined>(undefined);
   const [selected, setSelected] = useState<WhatsappMessage | null>(null);
   const [sortKey, setSortKey] = useState('receivedAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const brandsQ = useQuery({
+    queryKey: ['brands', 'all'],
+    queryFn: async (): Promise<Brand[]> => {
+      const res = await api.get<Brand[]>('/brands');
+      return res.data;
+    },
+    staleTime: 60_000,
+  });
 
   const q = useMessages({
     page,
@@ -40,6 +52,7 @@ export function MessageLog() {
     status: status || undefined,
     report_type: reportType || undefined,
     sender_phone: senderPhone || undefined,
+    brand_id: brandId,
   });
 
   const rows = q.data?.data ?? [];
@@ -214,36 +227,51 @@ export function MessageLog() {
         <Select
           label="Status"
           value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
+          onValueChange={(val) => {
+            setStatus(val);
             setPage(1);
           }}
           className="max-w-[180px]"
-        >
-          <option value="">All</option>
-          <option value="received">Received</option>
-          <option value="processing">Processing</option>
-          <option value="parsed">Parsed</option>
-          <option value="flagged">Flagged</option>
-          <option value="reviewed">Reviewed</option>
-          <option value="rejected">Rejected</option>
-          <option value="failed">Failed</option>
-          <option value="duplicate">Duplicate</option>
-        </Select>
+          options={[
+            { value: '', label: 'All' },
+            { value: 'received', label: 'Received' },
+            { value: 'processing', label: 'Processing' },
+            { value: 'parsed', label: 'Parsed' },
+            { value: 'flagged', label: 'Flagged' },
+            { value: 'reviewed', label: 'Reviewed' },
+            { value: 'rejected', label: 'Rejected' },
+            { value: 'failed', label: 'Failed' },
+            { value: 'duplicate', label: 'Duplicate' },
+          ]}
+        />
         <Select
           label="Report type"
           value={reportType}
-          onChange={(e) => {
-            setReportType(e.target.value);
+          onValueChange={(val) => {
+            setReportType(val);
             setPage(1);
           }}
           className="max-w-[180px]"
-        >
-          <option value="">All</option>
-          <option value="merchandiser">Merchandiser</option>
-          <option value="promoter">Promoter</option>
-          <option value="unknown">Unknown</option>
-        </Select>
+          options={[
+            { value: '', label: 'All' },
+            { value: 'merchandiser', label: 'Merchandiser' },
+            { value: 'promoter', label: 'Promoter' },
+            { value: 'unknown', label: 'Unknown' },
+          ]}
+        />
+        <Select
+          label="Brand"
+          value={brandId ?? ''}
+          onValueChange={(val) => {
+            setBrandId(val || undefined);
+            setPage(1);
+          }}
+          className="max-w-[220px]"
+          options={[
+            { value: '', label: 'All Brands' },
+            ...(brandsQ.data ?? []).map((b) => ({ value: b.id, label: b.name })),
+          ]}
+        />
         <Input
           label="Sender phone"
           value={senderPhone}

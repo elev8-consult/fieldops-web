@@ -3,9 +3,30 @@ import { ChevronDown } from 'lucide-react';
 import { forwardRef } from 'react';
 import type { SelectHTMLAttributes } from 'react';
 
-export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+interface SelectPropsBase {
   label?: string;
   error?: string;
+  placeholder?: string;
+}
+
+export interface SelectProps
+  extends SelectHTMLAttributes<HTMLSelectElement>,
+    SelectPropsBase {
+  /**
+   * Optional convenience API: pass string options.
+   * If provided, children are ignored.
+   */
+  options?: SelectOption[];
+  /**
+   * Optional convenience callback that receives the raw string value.
+   * This avoids parseInt/Number on UUIDs.
+   */
+  onValueChange?: (value: string) => void;
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
@@ -31,8 +52,21 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               className,
             )}
             {...props}
+            onChange={(e) => {
+              props.onChange?.(e);
+              props.onValueChange?.(e.target.value);
+            }}
           >
-            {children}
+            {props.placeholder != null && (
+              <option value="">{props.placeholder}</option>
+            )}
+            {props.options
+              ? props.options.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))
+              : children}
           </select>
           <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         </div>

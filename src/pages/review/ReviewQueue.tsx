@@ -20,10 +20,10 @@ export function ReviewQueue() {
   const [search, setSearch] = useState('');
   const [reportType, setReportType] = useState('');
   const [status, setStatus] = useState('flagged');
-  const [brandId, setBrandId] = useState<string>('');
+  const [brandId, setBrandId] = useState<string | undefined>(undefined);
 
   const brandFilter =
-    user?.role === 'brand_manager' ? user.brandId ?? undefined : brandId || undefined;
+    user?.role === 'brand_manager' ? user.brandId ?? undefined : brandId;
 
   const brandsQ = useQuery({
     queryKey: ['brands', 'all'],
@@ -109,34 +109,36 @@ export function ReviewQueue() {
           <Select
             label="Report type"
             value={reportType}
-            onChange={(e) => setReportType(e.target.value)}
-          >
-            <option value="">All</option>
-            <option value="merchandiser">Merchandiser</option>
-            <option value="promoter">Promoter</option>
-          </Select>
+            onValueChange={(val) => setReportType(val)}
+            options={[
+              { value: '', label: 'All' },
+              { value: 'merchandiser', label: 'Merchandiser' },
+              { value: 'promoter', label: 'Promoter' },
+            ]}
+          />
           <Select
             label="Status"
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
-          >
-            <option value="flagged">Flagged</option>
-            <option value="pending_review">Pending Review</option>
-            <option value="">All</option>
-          </Select>
+            onValueChange={(val) => setStatus(val)}
+            options={[
+              { value: 'flagged', label: 'Flagged' },
+              { value: 'pending_review', label: 'Pending Review' },
+              { value: '', label: 'All' },
+            ]}
+          />
           {hasRole('super_admin') && (
             <Select
               label="Brand"
-              value={brandId}
-              onChange={(e) => setBrandId(e.target.value)}
-            >
-              <option value="">All Brands</option>
-              {(brandsQ.data ?? []).map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </Select>
+              value={brandId ?? ''}
+              onValueChange={(val) => setBrandId(val || undefined)}
+              options={[
+                { value: '', label: 'All Brands' },
+                ...(brandsQ.data ?? []).map((b) => ({
+                  value: b.id,
+                  label: b.name,
+                })),
+              ]}
+            />
           )}
         </div>
         <p className="text-sm text-slate-500">{total} reports found</p>
