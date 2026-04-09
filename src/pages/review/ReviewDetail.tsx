@@ -11,16 +11,19 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { fetchOutlets } from '@/api/outlets';
-import { useAuth } from '@/hooks/useAuth';
 import {
   useApproveReport,
   useDismissFlag,
   useRejectReport,
   useResolveFlag,
   useReviewDetail,
-  useUpdateReviewReport,
+  useUpdateReport,
 } from '@/hooks/useReview';
-import { usePatchMerchandiserItem, useMerchandiserReports, usePatchPromoterSaleItem, usePatchPromoterSampleItem, usePromoterReports } from '@/hooks/useReports';
+import {
+  usePatchMerchandiserItem,
+  usePatchPromoterSaleItem,
+  usePatchPromoterSampleItem,
+} from '@/hooks/useReports';
 import { REPORT_TYPE_LABELS } from '@/lib/constants';
 import { formatConfidence, formatDateTime, getAxiosMessage } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -43,14 +46,7 @@ type HeaderForm = z.infer<typeof headerSchema>;
 export function ReviewDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-
   const detailQ = useReviewDetail(id);
-  const prForFilter = detailQ.data?.parsedReport;
-  const listBrandFilter =
-    user?.role === 'brand_manager'
-      ? user.brandId ?? undefined
-      : prForFilter?.brandId ?? undefined;
 
   const outletsQ = useQuery({
     queryKey: ['outlets', 'all'],
@@ -58,27 +54,7 @@ export function ReviewDetail() {
     staleTime: 60_000,
   });
 
-  const merchQ = useMerchandiserReports({
-    page: 1,
-    limit: 500,
-    brand_id: listBrandFilter,
-  });
-  const promoQ = usePromoterReports({
-    page: 1,
-    limit: 500,
-    brand_id: listBrandFilter,
-  });
-
-  const merchReport = useMemo(
-    () => merchQ.data?.data.find((m) => m.parsedReport.id === id),
-    [merchQ.data, id],
-  );
-  const promoReport = useMemo(
-    () => promoQ.data?.data.find((m) => m.parsedReport.id === id),
-    [promoQ.data, id],
-  );
-
-  const updateM = useUpdateReviewReport();
+  const updateM = useUpdateReport();
   const approveM = useApproveReport();
   const rejectM = useRejectReport();
   const resolveF = useResolveFlag();
@@ -93,9 +69,9 @@ export function ReviewDetail() {
   const [flagBusy, setFlagBusy] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  const pr = detailQ.data?.parsedReport;
-  const flags = detailQ.data?.flags ?? [];
-  const message = detailQ.data?.message;
+  const pr = detailQ.data;
+  const flags = pr?.flags ?? [];
+  const message = pr?.message ?? null;
 
   const form = useForm<HeaderForm>({
     resolver: zodResolver(headerSchema),
@@ -104,7 +80,7 @@ export function ReviewDetail() {
           reportDate: pr.reportDate?.slice(0, 10) ?? '',
           locationRaw: pr.locationRaw ?? '',
           nameRaw: pr.nameRaw ?? '',
-          outletId: pr.outletId ?? '',
+          outletId: pr.outlet?.id ?? pr.outletId ?? '',
         }
       : undefined,
   });
@@ -137,14 +113,25 @@ export function ReviewDetail() {
   }
 
   const senderTitle = pr.nameRaw ?? message?.bodyRaw?.slice(0, 40) ?? 'Report';
-  const conf = pr.confidence ?? 0;
+  const conf = message?.aiConfidence ?? 0;
   const confColor =
     conf >= 0.85 ? 'text-emerald-600' : conf >= 0.65 ? 'text-amber-600' : 'text-red-600';
+
+  const missingFields = useMemo(() => {
+    const extraction = message?.aiExtraction;
+    if (!extraction || typeof extraction !== 'object') return [];
+    const raw = (extraction as Record<string, unknown>).missing_fields;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((x): x is string => typeof x === 'string')
+      .map((x) => x.trim())
+      .filter(Boolean);
+  }, [message]);
 
   const onSaveHeader = form.handleSubmit((vals) => {
     updateM.mutate({
       id: pr.id,
-      body: {
+      data: {
         reportDate: vals.reportDate || null,
         locationRaw: vals.locationRaw ?? null,
         nameRaw: vals.nameRaw ?? null,
@@ -185,6 +172,11 @@ export function ReviewDetail() {
           <Card title="Report Information" padding>
             <form onSubmit={onSaveHeader} className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Input
+                label="Brand"
+                value={pr.brand?.name ?? '—'}
+                readOnly
+              />
+              <Input
                 label="Date"
                 type="date"
                 {...form.register('reportDate')}
@@ -213,55 +205,48 @@ export function ReviewDetail() {
             </form>
           </Card>
 
-          {pr.reportType === 'merchandiser' && merchQ.isLoading && (
-            <Card title="Stock Items" padding>
-              <Skeleton variant="table-row" />
-            </Card>
-          )}
-          {pr.reportType === 'merchandiser' && !merchQ.isLoading && !merchReport && (
-            <Card title="Stock Items" padding>
-              <p className="text-sm text-slate-500">
-                Line items could not be loaded from the merchandiser reports list.
-                Try again or open this report from Merchandiser Reports.
-              </p>
-            </Card>
-          )}
-          {pr.reportType === 'merchandiser' && merchReport && (
+          {pr.reportType === 'merchandiser' && (
             <Card
               title="Stock Items"
-              subtitle={`${merchReport.items.length} items`}
+              subtitle={`${(pr.reportData?.items ?? []).length} items`}
               padding
             >
               <MerchandiserItemsTable
-                items={merchReport.items}
+                items={pr.reportData?.items ?? []}
                 onSaveItem={(itemId, body) => {
+                  if (!pr.reportData?.id) return;
                   patchMerchItem.mutate({
-                    reportId: merchReport.id,
+                    reportId: pr.reportData.id,
                     itemId,
                     body,
                   });
                 }}
                 savingId={
-                  patchMerchItem.isPending ? patchMerchItem.variables?.itemId ?? null : null
+                  patchMerchItem.isPending
+                    ? patchMerchItem.variables?.itemId ?? null
+                    : null
                 }
               />
             </Card>
           )}
 
-          {pr.reportType === 'promoter' && promoQ.isLoading && (
+          {pr.reportType === 'promoter' && (
             <Card title="Promoter data" padding>
-              <Skeleton variant="table-row" />
-            </Card>
-          )}
-          {pr.reportType === 'promoter' && !promoQ.isLoading && !promoReport && (
-            <Card title="Promoter data" padding>
-              <p className="text-sm text-slate-500">
-                Sales and samples could not be loaded from the promoter reports list.
-              </p>
-            </Card>
-          )}
-          {pr.reportType === 'promoter' && promoReport && (
-            <Card title="Promoter data" padding>
+              <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="rounded-lg border border-slate-100 bg-white p-3">
+                  <div className="text-xs text-slate-500">Persons contacted</div>
+                  <div className="mt-1 text-2xl font-bold text-slate-900">
+                    {pr.reportData?.personsContacted ?? '—'}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-100 bg-white p-3">
+                  <div className="text-xs text-slate-500">Persons tasted</div>
+                  <div className="mt-1 text-2xl font-bold text-slate-900">
+                    {pr.reportData?.personsTasted ?? '—'}
+                  </div>
+                </div>
+              </div>
+
               <div className="mb-4 flex gap-2 border-b border-slate-100 pb-2">
                 {(['sales', 'samples', 'feedback'] as const).map((t) => (
                   <button
@@ -278,33 +263,37 @@ export function ReviewDetail() {
                   </button>
                 ))}
               </div>
+
               {tab === 'sales' && (
                 <PromoterSalesTable
-                  items={promoReport.sales}
-                  reportId={promoReport.id}
-                  onSaveItem={(itemId, body) =>
+                  items={pr.reportData?.sales ?? []}
+                  reportId={pr.reportData?.id ?? ''}
+                  onSaveItem={(itemId, body) => {
+                    if (!pr.reportData?.id) return;
                     patchSale.mutate({
-                      reportId: promoReport.id,
+                      reportId: pr.reportData.id,
                       itemId,
                       body,
-                    })
-                  }
+                    });
+                  }}
                   savingId={
                     patchSale.isPending ? patchSale.variables?.itemId ?? null : null
                   }
                 />
               )}
+
               {tab === 'samples' && (
                 <PromoterSamplesTable
-                  items={promoReport.samples}
-                  reportId={promoReport.id}
-                  onSaveItem={(itemId, body) =>
+                  items={pr.reportData?.samples ?? []}
+                  reportId={pr.reportData?.id ?? ''}
+                  onSaveItem={(itemId, body) => {
+                    if (!pr.reportData?.id) return;
                     patchSample.mutate({
-                      reportId: promoReport.id,
+                      reportId: pr.reportData.id,
                       itemId,
                       body,
-                    })
-                  }
+                    });
+                  }}
                   savingId={
                     patchSample.isPending
                       ? patchSample.variables?.itemId ?? null
@@ -312,22 +301,23 @@ export function ReviewDetail() {
                   }
                 />
               )}
+
               {tab === 'feedback' && (
                 <div className="space-y-4">
                   <blockquote className="rounded-lg border-l-4 border-indigo-500 bg-slate-50 p-4 italic text-slate-700">
-                    {promoReport.feedbackText ?? '—'}
+                    {pr.reportData?.feedbackText ?? '—'}
                   </blockquote>
-                  {promoReport.mostAskedQuestion && (
+                  {pr.reportData?.mostAskedQuestion && (
                     <div className="rounded-lg bg-amber-50 p-3 text-sm">
                       <span className="font-semibold text-amber-900">
                         Most asked:{' '}
                       </span>
-                      {promoReport.mostAskedQuestion}
+                      {pr.reportData.mostAskedQuestion}
                     </div>
                   )}
                   <div className="space-y-2">
-                    {(Array.isArray(promoReport.questionsAnswers)
-                      ? promoReport.questionsAnswers
+                    {(Array.isArray(pr.reportData?.questionsAnswers)
+                      ? pr.reportData?.questionsAnswers
                       : []
                     ).map((qa, i) => (
                       <details key={i} className="rounded-lg border border-slate-100">
@@ -348,7 +338,8 @@ export function ReviewDetail() {
           <Card title="Original Message" padding>
             <MessagePreview
               bodyRaw={message?.bodyRaw ?? null}
-              messageType="text"
+              messageType={message?.messageType ?? 'text'}
+              receivedAt={message?.receivedAt}
             />
           </Card>
         </div>
@@ -366,19 +357,13 @@ export function ReviewDetail() {
               onResolve={(fid) => {
                 setFlagBusy(fid);
                 startTransition(() => {
-                  resolveF.mutate(
-                    { flagId: fid, reportId: pr.id },
-                    { onSettled: () => setFlagBusy(null) },
-                  );
+                  resolveF.mutate(fid, { onSettled: () => setFlagBusy(null) });
                 });
               }}
               onDismiss={(fid) => {
                 setFlagBusy(fid);
                 startTransition(() => {
-                  dismissF.mutate(
-                    { flagId: fid, reportId: pr.id },
-                    { onSettled: () => setFlagBusy(null) },
-                  );
+                  dismissF.mutate(fid, { onSettled: () => setFlagBusy(null) });
                 });
               }}
             />
@@ -386,7 +371,7 @@ export function ReviewDetail() {
 
           <Card title="AI Analysis" padding>
             <div className={`text-3xl font-bold ${confColor}`}>
-              {formatConfidence(pr.confidence)}
+              {formatConfidence(message?.aiConfidence ?? null)}
             </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
               <div
@@ -394,6 +379,18 @@ export function ReviewDetail() {
                 style={{ width: `${Math.min(100, Math.round(conf * 100))}%` }}
               />
             </div>
+            {missingFields.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {missingFields.map((f) => (
+                  <span
+                    key={f}
+                    className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800"
+                  >
+                    {f}
+                  </span>
+                ))}
+              </div>
+            )}
             <p className="mt-4 text-sm text-slate-600">
               Type: {REPORT_TYPE_LABELS[pr.reportType] ?? pr.reportType}
             </p>

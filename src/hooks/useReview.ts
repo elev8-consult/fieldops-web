@@ -1,131 +1,86 @@
-import {
-  approveReview,
-  dismissFlag,
-  fetchReviewDetail,
-  fetchReviewQueue,
-  fetchReviewQueueCount,
-  rejectReview,
-  resolveFlag,
-  updateReviewReport,
-  type ReviewQueueParams,
-} from '@/api/review';
-import { reviewKeys } from '@/hooks/reviewKeys';
-import { useUiStore } from '@/store/ui.store';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { reviewApi } from '../api/review'
 
-export type { ReviewQueueParams };
-export { reviewKeys };
-
-export function useReviewQueue(filters: ReviewQueueParams) {
+export function useReviewQueue(filters?: {
+  brand_id?:    string
+  report_type?: string
+  status?:      string
+  page?:        number
+  limit?:       number
+}) {
   return useQuery({
-    queryKey: reviewKeys.queue(filters),
-    queryFn: () => fetchReviewQueue(filters),
-    staleTime: 30_000,
-    retry: 2,
-    refetchOnWindowFocus: false,
-  });
+    queryKey:       ['review', 'queue', filters],
+    queryFn:        () => reviewApi.getQueue(filters),
+    staleTime:      15000,
+    refetchInterval: 60000,
+  })
 }
 
 export function useReviewFlaggedCount(brandId?: string) {
   return useQuery({
-    queryKey: ['review', 'flagged-count', brandId ?? 'all'],
-    queryFn: () =>
-      fetchReviewQueueCount({
-        status: 'flagged',
-        brand_id: brandId,
-      }),
-    refetchInterval: 60_000,
-    staleTime: 30_000,
-    retry: 2,
-    refetchOnWindowFocus: false,
-  });
+    queryKey:  ['review', 'count', brandId],
+    queryFn:   () => reviewApi.getCount(brandId),
+    staleTime: 30000,
+    refetchInterval: 60000,
+  })
 }
 
 export function useReviewDetail(id: string | undefined) {
   return useQuery({
-    queryKey: reviewKeys.detail(id ?? ''),
-    queryFn: () => fetchReviewDetail(id!),
-    enabled: Boolean(id),
-    staleTime: 30_000,
-    retry: 2,
-    refetchOnWindowFocus: false,
-  });
+    queryKey: ['review', 'detail', id],
+    queryFn:  () => reviewApi.getReport(id!),
+    enabled:  !!id,
+    staleTime: 30000,
+  })
 }
 
 export function useApproveReport() {
-  const qc = useQueryClient();
-  const addToast = useUiStore((s) => s.addToast);
+  const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => approveReview(id),
-    onSuccess: async (_, id) => {
-      addToast('success', 'Report approved');
-      await qc.invalidateQueries({ queryKey: reviewKeys.all });
-      await qc.invalidateQueries({ queryKey: reviewKeys.detail(id) });
+    mutationFn: (id: string) => reviewApi.approve(id),
+    onSuccess:  () => {
+      qc.invalidateQueries({ queryKey: ['review'] })
     },
-    onError: (e: Error) => addToast('error', e.message || 'Approve failed'),
-  });
+  })
 }
 
 export function useRejectReport() {
-  const qc = useQueryClient();
-  const addToast = useUiStore((s) => s.addToast);
+  const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => rejectReview(id),
-    onSuccess: async (_, id) => {
-      addToast('success', 'Report rejected');
-      await qc.invalidateQueries({ queryKey: reviewKeys.all });
-      await qc.invalidateQueries({ queryKey: reviewKeys.detail(id) });
+    mutationFn: (id: string) => reviewApi.reject(id),
+    onSuccess:  () => {
+      qc.invalidateQueries({ queryKey: ['review'] })
     },
-    onError: (e: Error) => addToast('error', e.message || 'Reject failed'),
-  });
+  })
 }
 
-export function useUpdateReviewReport() {
-  const qc = useQueryClient();
-  const addToast = useUiStore((s) => s.addToast);
+export function useUpdateReport() {
+  const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({
-      id,
-      body,
-    }: {
-      id: string;
-      body: Parameters<typeof updateReviewReport>[1];
-    }) => updateReviewReport(id, body),
-    onSuccess: async (_, { id }) => {
-      addToast('success', 'Report updated');
-      await qc.invalidateQueries({ queryKey: reviewKeys.all });
-      await qc.invalidateQueries({ queryKey: reviewKeys.detail(id) });
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      reviewApi.update(id, data),
+    onSuccess: (_d, { id }) => {
+      qc.invalidateQueries({ queryKey: ['review', 'detail', id] })
     },
-    onError: (e: Error) => addToast('error', e.message || 'Update failed'),
-  });
+  })
 }
 
 export function useResolveFlag() {
-  const qc = useQueryClient();
-  const addToast = useUiStore((s) => s.addToast);
+  const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ flagId, reportId }: { flagId: string; reportId: string }) =>
-      resolveFlag(flagId).then(() => reportId),
-    onSuccess: async (reportId) => {
-      addToast('success', 'Flag resolved');
-      await qc.invalidateQueries({ queryKey: reviewKeys.all });
-      await qc.invalidateQueries({ queryKey: reviewKeys.detail(reportId) });
+    mutationFn: (flagId: string) => reviewApi.resolveFlag(flagId),
+    onSuccess:  () => {
+      qc.invalidateQueries({ queryKey: ['review'] })
     },
-    onError: (e: Error) => addToast('error', e.message || 'Resolve failed'),
-  });
+  })
 }
 
 export function useDismissFlag() {
-  const qc = useQueryClient();
-  const addToast = useUiStore((s) => s.addToast);
+  const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ flagId, reportId }: { flagId: string; reportId: string }) =>
-      dismissFlag(flagId).then(() => reportId),
-    onSuccess: async (reportId) => {
-      addToast('success', 'Flag dismissed');
-      await qc.invalidateQueries({ queryKey: reviewKeys.all });
-      await qc.invalidateQueries({ queryKey: reviewKeys.detail(reportId) });
+    mutationFn: (flagId: string) => reviewApi.dismissFlag(flagId),
+    onSuccess:  () => {
+      qc.invalidateQueries({ queryKey: ['review'] })
     },
-    onError: (e: Error) => addToast('error', e.message || 'Dismiss failed'),
-  });
+  })
 }

@@ -5,12 +5,14 @@ import { Input } from '@/components/ui/Input';
 import { Pagination } from '@/components/ui/Pagination';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
+import api from '@/api/axios';
 import { useAuth } from '@/hooks/useAuth';
 import { useReviewQueue } from '@/hooks/useReview';
 import { getAxiosMessage } from '@/lib/utils';
-import type { ParsedReport } from '@/types';
+import type { Brand, ParsedReport } from '@/types';
 import { AlertTriangle, ClipboardCheck } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 export function ReviewQueue() {
   const { user, hasRole } = useAuth();
@@ -18,10 +20,28 @@ export function ReviewQueue() {
   const [search, setSearch] = useState('');
   const [reportType, setReportType] = useState('');
   const [status, setStatus] = useState('flagged');
-  const [brandId, setBrandId] = useState('');
+  const [brandId, setBrandId] = useState<string>('');
 
   const brandFilter =
     user?.role === 'brand_manager' ? user.brandId ?? undefined : brandId || undefined;
+
+  const brandsQ = useQuery({
+    queryKey: ['brands', 'all'],
+    queryFn: async (): Promise<Brand[]> => {
+      const res = await api.get<Brand[]>('/brands');
+      return res.data;
+    },
+    staleTime: 60_000,
+    enabled: hasRole('super_admin'),
+  });
+
+  const brandNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const b of brandsQ.data ?? []) {
+      map.set(b.id, b.name);
+    }
+    return map;
+  }, [brandsQ.data]);
 
   const query = useReviewQueue({
     page,
@@ -105,12 +125,18 @@ export function ReviewQueue() {
             <option value="">All</option>
           </Select>
           {hasRole('super_admin') && (
-            <Input
-              label="Brand ID"
-              placeholder="Filter by brand"
+            <Select
+              label="Brand"
               value={brandId}
               onChange={(e) => setBrandId(e.target.value)}
-            />
+            >
+              <option value="">All Brands</option>
+              {(brandsQ.data ?? []).map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </Select>
           )}
         </div>
         <p className="text-sm text-slate-500">{total} reports found</p>
@@ -129,10 +155,13 @@ export function ReviewQueue() {
       ) : (
         <div className="space-y-4">
           {filtered.map((r: ParsedReport) => (
+            // Queue rows are flat; resolve brand name from brandId where possible
             <ReviewCard
               key={r.id}
               report={r}
-              senderName={r.nameRaw ?? undefined}
+              senderName={`${brandNameById.get(r.brandId ?? '') ?? 'Unknown brand'} — ${
+                r.nameRaw ?? 'Unknown reporter'
+              }`}
               itemCount={r.flags?.length ?? 0}
             />
           ))}

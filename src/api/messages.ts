@@ -1,32 +1,37 @@
-import { api } from '@/api/axios';
-import { normalizeMessage } from '@/lib/normalize';
-import type { PaginatedResponse, WhatsappMessage } from '@/types';
+import api from './axios'
+import { WhatsappMessage, PaginatedResponse } from '../types'
 
-export interface MessageListParams {
-  status?: string;
-  report_type?: string;
-  brand_id?: string;
-  sender_phone?: string;
-  from?: string;
-  to?: string;
-  page?: number;
-  limit?: number;
+export const messagesApi = {
+  findAll: (params?: {
+    status?:       string
+    report_type?:  string
+    brand_id?:     string
+    sender_phone?: string
+    from?:         string
+    to?:           string
+    page?:         number
+    limit?:        number
+  }): Promise<PaginatedResponse<WhatsappMessage>> =>
+    api.get('/messages', { params }).then(r => r.data),
+
+  findOne: (id: string): Promise<WhatsappMessage> =>
+    api.get(`/messages/${id}`).then(r => r.data),
 }
+
+export type MessageListParams = Parameters<typeof messagesApi.findAll>[0] extends
+  | infer P
+  | undefined
+  ? P extends object
+    ? P
+    : never
+  : never
 
 export async function fetchMessages(
   params: MessageListParams,
 ): Promise<PaginatedResponse<WhatsappMessage>> {
-  const { data } = await api.get<PaginatedResponse<Record<string, unknown>>>(
-    '/messages',
-    { params },
-  );
-  return {
-    ...data,
-    data: data.data.map((row) => normalizeMessage(row)),
-  };
+  return messagesApi.findAll(params)
 }
 
 export async function fetchMessage(id: string): Promise<WhatsappMessage> {
-  const { data } = await api.get<Record<string, unknown>>(`/messages/${id}`);
-  return normalizeMessage(data);
+  return messagesApi.findOne(id)
 }

@@ -1,8 +1,7 @@
-import { loginApi } from '@/api/auth';
+import { authApi } from '@/api/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { useAuth } from '@/hooks/useAuth';
-import { getAxiosMessage } from '@/lib/utils';
+import { useAuthStore } from '@/store/auth.store';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   BarChart3,
@@ -10,7 +9,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -23,16 +22,16 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function Login() {
-  const { isAuthenticated, setAuth } = useAuth();
   const navigate = useNavigate();
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [showPw, setShowPw] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid },
+    setError,
+    formState: { errors, isValid, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     mode: 'onChange',
@@ -43,17 +42,19 @@ export function Login() {
     return <Navigate to="/" replace />;
   }
 
-  const onSubmit = (values: FormValues) => {
-    setError(null);
-    startTransition(async () => {
-      try {
-        const { token, user } = await loginApi(values.email, values.password);
-        setAuth(user, token);
-        navigate('/', { replace: true });
-      } catch (e) {
-        setError(getAxiosMessage(e));
-      }
-    });
+  const onSubmit = async (data: { email: string; password: string }) => {
+    try {
+      const response = await authApi.login(data);
+      setAuth(response.user, response.access_token);
+      navigate('/');
+    } catch (error: unknown) {
+      const err = error as {
+        response?: { data?: { message?: string | string[] } };
+      };
+      const raw = err.response?.data?.message ?? 'Login failed';
+      const message = Array.isArray(raw) ? raw.join(', ') : String(raw);
+      setError('root', { message });
+    }
   };
 
   const hour = new Date().getHours();
@@ -138,14 +139,14 @@ export function Login() {
             <Button
               type="submit"
               className="w-full"
-              loading={isPending}
+              loading={isSubmitting}
               disabled={!isValid}
             >
               Sign in
             </Button>
-            {error && (
+            {errors.root && (
               <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                {error}
+                {errors.root.message}
               </div>
             )}
           </form>

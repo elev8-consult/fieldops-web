@@ -1,51 +1,55 @@
-import type { User } from '@/types';
-import { normalizeUser } from '@/lib/normalize';
-import { create } from 'zustand';
+import { create }  from 'zustand';
+import { User }    from '../types';
 
 const TOKEN_KEY = 'fieldops_token';
-const USER_KEY = 'fieldops_user';
-
-function readStoredUser(): User | null {
-  try {
-    const raw = localStorage.getItem(USER_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    return normalizeUser(parsed);
-  } catch {
-    return null;
-  }
-}
-
-function readStoredToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
+const USER_KEY  = 'fieldops_user';
 
 interface AuthState {
-  user: User | null;
-  token: string | null;
-  setAuth: (user: User, token: string) => void;
-  clearAuth: () => void;
+  user:            User | null;
+  token:           string | null;
   isAuthenticated: boolean;
-  hasRole: (...roles: string[]) => boolean;
+  setAuth:         (user: User, token: string) => void;
+  clearAuth:       () => void;
+  hasRole:         (...roles: string[]) => boolean;
+}
+
+// Hydrate from localStorage on init
+const storedToken = localStorage.getItem(TOKEN_KEY);
+const storedUser  = localStorage.getItem(USER_KEY);
+
+let initialUser:  User | null   = null;
+let initialToken: string | null = null;
+
+try {
+  if (storedToken && storedUser) {
+    initialUser  = JSON.parse(storedUser);
+    initialToken = storedToken;
+  }
+} catch {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  user: readStoredUser(),
-  token: readStoredToken(),
-  isAuthenticated: Boolean(readStoredToken() && readStoredUser()),
-  setAuth: (user, token) => {
+  user:            initialUser,
+  token:           initialToken,
+  isAuthenticated: initialToken !== null && initialUser !== null,
+
+  setAuth: (user: User, token: string) => {
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
     set({ user, token, isAuthenticated: true });
   },
+
   clearAuth: () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     set({ user: null, token: null, isAuthenticated: false });
   },
+
   hasRole: (...roles: string[]) => {
-    const u = get().user;
-    if (!u) return false;
-    return roles.includes(u.role);
+    const { user } = get();
+    if (!user) return false;
+    return roles.includes(user.role);
   },
 }));

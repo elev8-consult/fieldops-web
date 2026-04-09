@@ -1,71 +1,34 @@
-import { api } from '@/api/axios';
-import type {
-  AnalyticsSummaryRow,
+import api from './axios'
+import {
+  AnalyticsSummary,
   FlaggedRate,
-  ReportsByDayRow,
-  TopFlaggedProductRow,
-} from '@/types';
+  ReportsByDay,
+  TopFlaggedProduct,
+} from '../types'
 
-export async function fetchAnalyticsSummary(params: {
-  brand_id?: string;
-  from?: string;
-  to?: string;
-}): Promise<AnalyticsSummaryRow[]> {
-  const { data } = await api.get<AnalyticsSummaryRow[]>('/analytics/summary', {
-    params,
-  });
-  return data.map((row) => ({
-    reportType: row.reportType,
-    status: row.status,
-    count: typeof row.count === 'string' ? parseInt(row.count, 10) : row.count,
-  }));
-}
+export const analyticsApi = {
+  getSummary: (params?: {
+    brand_id?: string
+    from?:     string
+    to?:       string
+  }): Promise<AnalyticsSummary[]> =>
+    api.get('/analytics/summary', { params }).then(r => r.data),
 
-export async function fetchFlaggedRate(params: {
-  brand_id?: string;
-}): Promise<FlaggedRate> {
-  const { data } = await api.get<Record<string, unknown>>(
-    '/analytics/flagged-rate',
-    { params },
-  );
-  return {
-    flagged:
-      typeof data.flagged === 'string'
-        ? parseInt(data.flagged, 10)
-        : Number(data.flagged),
-    total:
-      typeof data.total === 'string'
-        ? parseInt(data.total, 10)
-        : Number(data.total),
-    rate:
-      typeof data.rate === 'string' ? parseFloat(data.rate) : Number(data.rate),
-  };
-}
+  getFlaggedRate: (params?: {
+    brand_id?: string
+  }): Promise<FlaggedRate> =>
+    api.get('/analytics/flagged-rate', { params }).then(r => r.data),
 
-export async function fetchReportsByDay(params: {
-  brand_id?: string;
-  from?: string;
-  to?: string;
-}): Promise<ReportsByDayRow[]> {
-  const { data } = await api.get<ReportsByDayRow[]>('/analytics/reports-by-day', {
-    params,
-  });
-  return data.map((row) => ({
-    day: row.day,
-    count: typeof row.count === 'string' ? parseInt(row.count, 10) : row.count,
-  }));
-}
+  getReportsByDay: (params?: {
+    brand_id?: string
+    from?:     string
+    to?:       string
+  }): Promise<ReportsByDay[]> =>
+    api.get('/analytics/reports-by-day', { params }).then(r => r.data),
 
-export async function fetchTopFlaggedProducts(params: {
-  brand_id?: string;
-  limit?: number;
-}): Promise<TopFlaggedProductRow[]> {
-  const { data } = await api.get<TopFlaggedProductRow[]>(
-    '/analytics/top-flagged-products',
-    { params },
-  );
-  return data.map((row) => ({
-    productNameRaw: row.productNameRaw,
-    count: typeof row.count === 'string' ? parseInt(row.count, 10) : row.count,
-  }));
+  getTopFlaggedProducts: (params?: {
+    brand_id?: string
+    limit?:    number
+  }): Promise<TopFlaggedProduct[]> =>
+    api.get('/analytics/top-flagged-products', { params }).then(r => r.data),
 }

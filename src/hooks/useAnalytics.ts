@@ -1,70 +1,42 @@
-import {
-  fetchAnalyticsSummary,
-  fetchFlaggedRate,
-  fetchReportsByDay,
-  fetchTopFlaggedProducts,
-} from '@/api/analytics';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery }    from '@tanstack/react-query'
+import { analyticsApi }from '../api/analytics'
 
-export const analyticsKeys = {
-  all: ['analytics'] as const,
-  summary: (p: { brand_id?: string; from?: string; to?: string }) =>
-    ['analytics', 'summary', p] as const,
-  flaggedRate: (brand_id?: string) =>
-    ['analytics', 'flagged-rate', brand_id] as const,
-  byDay: (p: { brand_id?: string; from?: string; to?: string }) =>
-    ['analytics', 'by-day', p] as const,
-  topProducts: (p: { brand_id?: string; limit?: number }) =>
-    ['analytics', 'top-products', p] as const,
-};
-
-export function useAnalyticsSummary(params: {
-  brand_id?: string;
-  from?: string;
-  to?: string;
+export function useAnalyticsSummary(filters?: {
+  brand_id?: string
+  from?:     string
+  to?:       string
 }) {
   return useQuery({
-    queryKey: analyticsKeys.summary(params),
-    queryFn: () => fetchAnalyticsSummary(params),
-    staleTime: 30_000,
-    retry: 2,
-    refetchOnWindowFocus: false,
-  });
+    queryKey:  ['analytics', 'summary', filters],
+    queryFn:   () => analyticsApi.getSummary(filters),
+    staleTime: 30000,
+  })
 }
 
 export function useFlaggedRate(brandId?: string) {
   return useQuery({
-    queryKey: analyticsKeys.flaggedRate(brandId),
-    queryFn: () => fetchFlaggedRate({ brand_id: brandId }),
-    staleTime: 30_000,
-    retry: 2,
-    refetchOnWindowFocus: false,
-  });
+    queryKey:  ['analytics', 'flagged-rate', brandId],
+    queryFn:   () => analyticsApi.getFlaggedRate({ brand_id: brandId }),
+    staleTime: 30000,
+  })
 }
 
-export function useReportsByDay(params: {
-  brand_id?: string;
-  from?: string;
-  to?: string;
+export function useReportsByDay(filters?: {
+  brand_id?: string
+  from?:     string
+  to?:       string
 }) {
   return useQuery({
-    queryKey: analyticsKeys.byDay(params),
-    queryFn: () => fetchReportsByDay(params),
-    staleTime: 30_000,
-    retry: 2,
-    refetchOnWindowFocus: false,
-  });
+    queryKey:  ['analytics', 'reports-by-day', filters],
+    queryFn:   () => analyticsApi.getReportsByDay(filters),
+    staleTime: 30000,
+  })
 }
 
-export function useTopFlaggedProducts(params: {
-  brand_id?: string;
-  limit?: number;
-}) {
+export function useTopFlaggedProducts(brandId?: string, limit?: number) {
   return useQuery({
-    queryKey: analyticsKeys.topProducts(params),
-    queryFn: () => fetchTopFlaggedProducts(params),
-    staleTime: 30_000,
-    retry: 2,
-    refetchOnWindowFocus: false,
-  });
+    queryKey:  ['analytics', 'top-flagged-products', brandId, limit],
+    queryFn:   () => analyticsApi.getTopFlaggedProducts({ brand_id: brandId, limit }),
+    staleTime: 30000,
+  })
 }

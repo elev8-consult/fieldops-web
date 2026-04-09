@@ -50,7 +50,7 @@ export function Dashboard() {
     from: from14,
     to: todayEnd,
   });
-  const topProdQ = useTopFlaggedProducts({ brand_id: brandId, limit: 10 });
+  const topProdQ = useTopFlaggedProducts(brandId, 10);
   const recentFlaggedQ = useReviewQueue({
     status: 'flagged',
     brand_id: brandId,
@@ -58,28 +58,37 @@ export function Dashboard() {
     limit: 5,
   });
 
-  const ratioM = useMemo(() => {
-    const rows = summaryAllQ.data ?? [];
-    let m = 0;
-    let p = 0;
-    for (const r of rows) {
-      if (r.reportType === 'merchandiser') m += r.count;
-      if (r.reportType === 'promoter') p += r.count;
-    }
-    const t = m + p;
-    return t ? m / t : 0.5;
-  }, [summaryAllQ.data]);
-
   const linePoints: ReportDayPoint[] = useMemo(() => {
-    return (byDayQ.data ?? []).map((row) => {
-      const m = Math.round(row.count * ratioM);
-      return {
-        day: row.day,
-        merchandiser: m,
-        promoter: Math.max(0, row.count - m),
-      };
-    });
-  }, [byDayQ.data, ratioM]);
+    const rows = byDayQ.data ?? [];
+    const map = new Map<string, { merchandiser: number; promoter: number }>();
+
+    for (const r of rows as unknown as Array<Record<string, unknown>>) {
+      const day = String(r['day']);
+      const rt = String(r['reportType'] ?? r['report_type'] ?? '');
+      const rawCount = r['count'];
+      const count =
+        typeof rawCount === 'number'
+          ? rawCount
+          : parseInt(String(rawCount), 10) || 0;
+      const cur = map.get(day) ?? { merchandiser: 0, promoter: 0 };
+      if (rt === 'merchandiser') cur.merchandiser += count;
+      if (rt === 'promoter') cur.promoter += count;
+      map.set(day, cur);
+    }
+
+    return [...map.entries()].map(([day, v]) => ({
+      day,
+      merchandiser: v.merchandiser,
+      promoter: v.promoter,
+    }));
+  }, [byDayQ.data]);
+
+  const topProductRows = useMemo(() => {
+    return (topProdQ.data ?? []).map((r) => ({
+      productNameRaw: r.product_name_raw,
+      count: r.count,
+    }));
+  }, [topProdQ.data]);
 
   const totalToday = useMemo(() => {
     return (summaryQ.data ?? []).reduce((a, r) => a + r.count, 0);
@@ -107,8 +116,10 @@ export function Dashboard() {
 
   const accuracy = useMemo(() => {
     const fr = flaggedQ.data;
-    if (!fr || fr.total === 0) return 100;
-    return Math.round((1 - fr.rate) * 100);
+    if (!fr) return 100;
+    const rate = parseFloat(fr.rate);
+    if (!Number.isFinite(rate)) return 100;
+    return Math.max(0, Math.min(100, Math.round(100 - rate * 100)));
   }, [flaggedQ.data]);
 
   const firstName = user?.fullName?.split(' ')[0] ?? 'there';
@@ -204,7 +215,8 @@ export function Dashboard() {
             <AlertTriangle className="h-5 w-5 text-amber-600" />
           </div>
           <div className="mt-4 text-3xl font-bold text-slate-900">
-            {flaggedToday || flaggedQ.data?.flagged || 0}
+            {flaggedToday ||
+              (flaggedQ.data?.flagged ? parseInt(flaggedQ.data.flagged, 10) : 0)}
           </div>
           <p className="text-sm text-slate-500">need review</p>
         </button>
@@ -297,7 +309,7 @@ export function Dashboard() {
           padding
         >
           <TopFlaggedProductsChart
-            data={topProdQ.data ?? []}
+            data={topProductRows}
             loading={topProdQ.isLoading}
           />
         </Card>

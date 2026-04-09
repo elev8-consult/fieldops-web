@@ -120,8 +120,34 @@ export interface ParsedReport {
   isDepotReport: boolean;
   createdAt: string;
   flags?: ReportFlag[];
-  brand?: Brand;
-  outlet?: Outlet | null;
+  brand?: Brand | { id: string; name: string; slug: string } | null;
+  outlet?: Outlet | { id: string; name: string; type: string; isDepot: boolean } | null;
+  message?: {
+    id: string;
+    bodyRaw: string | null;
+    bodyNormalized: string | null;
+    aiExtraction: Record<string, unknown> | null;
+    aiClassification: Record<string, unknown> | null;
+    aiConfidence: number | null;
+    messageType: string;
+    senderPhone: string;
+    senderName: string | null;
+    receivedAt: string;
+  } | null;
+  reportData?: {
+    id: string;
+    promoType?: string | null;
+    notes?: string | null;
+    items?: MerchandiserItem[];
+    promoStandPlacement?: string | null;
+    personsContacted?: number | null;
+    personsTasted?: number | null;
+    feedbackText?: string | null;
+    mostAskedQuestion?: string | null;
+    questionsAnswers?: { question: string; answer: string }[];
+    sales?: PromoterSaleItem[];
+    samples?: PromoterSampleItem[];
+  } | null;
 }
 
 export interface MerchandiserItem {
@@ -192,10 +218,12 @@ export interface AnalyticsSummaryRow {
   count: number;
 }
 
+export type AnalyticsSummary = AnalyticsSummaryRow;
+
 export interface FlaggedRate {
-  flagged: number;
-  total: number;
-  rate: number;
+  flagged: string;
+  total: string;
+  rate: string;
 }
 
 export interface ReportsByDayRow {
@@ -206,4 +234,16 @@ export interface ReportsByDayRow {
 export interface TopFlaggedProductRow {
   productNameRaw: string;
   count: number;
+}
+
+export interface ReportsByDay {
+  day: string;
+  reportType: string;
+  report_type?: string;
+  count: number;
+}
+
+export interface TopFlaggedProduct {
+  product_name_raw: string;
+  count:            number;
 }
