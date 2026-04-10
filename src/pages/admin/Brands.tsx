@@ -44,6 +44,11 @@ export function Brands() {
     refetchOnWindowFocus: false,
   });
 
+  const brandsResponse = q.data as unknown;
+  const brands = Array.isArray(brandsResponse)
+    ? (brandsResponse as Brand[])
+    : (((brandsResponse as any)?.data ?? []) as Brand[]);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Brand | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -99,7 +104,7 @@ export function Brands() {
   });
 
   const filtered = useMemo(() => {
-    const list = (q.data ?? []).filter(
+    const list = brands.filter(
       (b) =>
         !search ||
         b.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -120,7 +125,7 @@ export function Brands() {
       return 0;
     });
     return list;
-  }, [q.data, search, sortKey, sortDir]);
+  }, [brands, search, sortKey, sortDir]);
 
   const columns: TableColumn<Brand>[] = useMemo(
     () => [

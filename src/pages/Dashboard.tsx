@@ -58,11 +58,30 @@ export function Dashboard() {
     limit: 5,
   });
 
+  const summaryResponse = summaryQ.data as unknown;
+  const summary = Array.isArray(summaryResponse)
+    ? (summaryResponse as Array<{ status: string; count: number }>)
+    : [];
+
+  const summaryAllResponse = summaryAllQ.data as unknown;
+  const summaryAll = Array.isArray(summaryAllResponse)
+    ? (summaryAllResponse as Array<{ status: string; count: number }>)
+    : [];
+
+  const byDayResponse = byDayQ.data as unknown;
+  const byDay = Array.isArray(byDayResponse)
+    ? (byDayResponse as Array<Record<string, unknown>>)
+    : [];
+
+  const topFlaggedResponse = topProdQ.data as unknown;
+  const topFlagged = Array.isArray(topFlaggedResponse)
+    ? (topFlaggedResponse as Array<{ product_name_raw: string; count: number }>)
+    : [];
+
   const linePoints: ReportDayPoint[] = useMemo(() => {
-    const rows = byDayQ.data ?? [];
     const map = new Map<string, { merchandiser: number; promoter: number }>();
 
-    for (const r of rows as unknown as Array<Record<string, unknown>>) {
+    for (const r of byDay) {
       const day = String(r['day']);
       const rt = String(r['reportType'] ?? r['report_type'] ?? '');
       const rawCount = r['count'];
@@ -81,38 +100,38 @@ export function Dashboard() {
       merchandiser: v.merchandiser,
       promoter: v.promoter,
     }));
-  }, [byDayQ.data]);
+  }, [byDay]);
 
   const topProductRows = useMemo(() => {
-    return (topProdQ.data ?? []).map((r) => ({
+    return topFlagged.map((r) => ({
       productNameRaw: r.product_name_raw,
       count: r.count,
     }));
-  }, [topProdQ.data]);
+  }, [topFlagged]);
 
   const totalToday = useMemo(() => {
-    return (summaryQ.data ?? []).reduce((a, r) => a + r.count, 0);
-  }, [summaryQ.data]);
+    return summary.reduce((a, r) => a + r.count, 0);
+  }, [summary]);
 
   const flaggedToday = useMemo(() => {
-    return (summaryQ.data ?? [])
+    return summary
       .filter((r) => r.status === 'flagged')
       .reduce((a, r) => a + r.count, 0);
-  }, [summaryQ.data]);
+  }, [summary]);
 
   const approvedToday = useMemo(() => {
-    return (summaryQ.data ?? [])
+    return summary
       .filter((r) => r.status === 'approved')
       .reduce((a, r) => a + r.count, 0);
-  }, [summaryQ.data]);
+  }, [summary]);
 
   const statusSlices = useMemo(() => {
     const map = new Map<string, number>();
-    for (const r of summaryAllQ.data ?? []) {
+    for (const r of summaryAll) {
       map.set(r.status, (map.get(r.status) ?? 0) + r.count);
     }
     return [...map.entries()].map(([status, count]) => ({ status, count }));
-  }, [summaryAllQ.data]);
+  }, [summaryAll]);
 
   const accuracy = useMemo(() => {
     const fr = flaggedQ.data;

@@ -199,7 +199,8 @@ export function Products() {
     });
   }
 
-  const rows = productsQ.data ?? [];
+  const productsResponse = productsQ.data;
+  const rows = productsResponse?.data ?? [];
   const sorted = useMemo(() => {
     const list = [...rows];
     list.sort((a, b) => {

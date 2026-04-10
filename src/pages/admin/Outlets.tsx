@@ -57,13 +57,18 @@ export function Outlets() {
     refetchOnWindowFocus: false,
   });
 
+  const outletsResponse = q.data as unknown;
+  const outlets = Array.isArray(outletsResponse)
+    ? (outletsResponse as Outlet[])
+    : (((outletsResponse as any)?.data ?? []) as Outlet[]);
+
   const regions = useMemo(() => {
     const m = new Map<string, { id: string; name: string; country: string }>();
-    for (const o of q.data ?? []) {
+    for (const o of outlets) {
       if (o.region) m.set(o.region.id, o.region);
     }
     return [...m.values()];
-  }, [q.data]);
+  }, [outlets]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Outlet | null>(null);
@@ -136,7 +141,7 @@ export function Outlets() {
   }
 
   const filtered = useMemo(() => {
-    const list = (q.data ?? []).filter(
+    const list = outlets.filter(
       (o) =>
         !search || o.name.toLowerCase().includes(search.toLowerCase()),
     );
@@ -155,7 +160,7 @@ export function Outlets() {
       return 0;
     });
     return list;
-  }, [q.data, search, sortKey, sortDir]);
+  }, [outlets, search, sortKey, sortDir]);
 
   const columns: TableColumn<Outlet>[] = useMemo(
     () => [

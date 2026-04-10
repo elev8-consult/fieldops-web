@@ -87,6 +87,11 @@ export function Users() {
     refetchOnWindowFocus: false,
   });
 
+  const usersResponse = usersQ.data as unknown;
+  const users = Array.isArray(usersResponse)
+    ? (usersResponse as User[])
+    : (((usersResponse as any)?.data ?? []) as User[]);
+
   const brandsQ = useQuery({
     queryKey: ['brands'],
     queryFn: fetchBrands,
@@ -173,7 +178,7 @@ export function Users() {
   };
 
   const filtered = useMemo(() => {
-    const list = (usersQ.data ?? []).filter(
+    const list = users.filter(
       (u) =>
         !search ||
         u.fullName.toLowerCase().includes(search.toLowerCase()) ||
@@ -195,7 +200,7 @@ export function Users() {
       return 0;
     });
     return list;
-  }, [usersQ.data, search, sortKey, sortDir]);
+  }, [users, search, sortKey, sortDir]);
 
   const columns: TableColumn<User>[] = useMemo(
     () => [
