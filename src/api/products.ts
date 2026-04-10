@@ -6,13 +6,34 @@ export interface ProductListParams {
   brand_id?: string;
   flow?: string;
   search?: string;
+  page?: number;
+  limit?: number;
 }
 
-export async function fetchProducts(params?: ProductListParams): Promise<Product[]> {
-  const { data } = await api.get<Record<string, unknown>[]>('/products', {
-    params,
-  });
-  return data.map((row) => normalizeProduct(row));
+export interface Paginated<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function fetchProducts(
+  params?: ProductListParams,
+): Promise<Paginated<Product>> {
+  const { data } = await api.get<Paginated<Record<string, unknown>>>(
+    '/products',
+    {
+      params: {
+        ...params,
+        brand_id: params?.brand_id || undefined,
+      },
+    },
+  );
+
+  return {
+    ...data,
+    data: (data.data ?? []).map((row) => normalizeProduct(row)),
+  };
 }
 
 export async function fetchProduct(id: string): Promise<Product> {
