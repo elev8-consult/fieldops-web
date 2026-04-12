@@ -12,13 +12,27 @@ import { PromoterReportDetail } from '@/pages/reports/PromoterReportDetail';
 import { PromoterReports } from '@/pages/reports/PromoterReports';
 import { ReviewDetail } from '@/pages/review/ReviewDetail';
 import { ReviewQueue } from '@/pages/review/ReviewQueue';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { ToastContainer } from '@/components/ui/ToastContainer';
 import { useAuthStore } from '@/store/auth.store';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import {
   createBrowserRouter,
   Navigate,
   Outlet,
+  RouterProvider,
 } from 'react-router-dom';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 2,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function RequireAuth() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -61,7 +75,26 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Dashboard /> },
           { path: 'review', element: <ReviewQueue /> },
-          { path: 'review/:id', element: <ReviewDetail /> },
+          {
+            path: 'review/:id',
+            element: <ReviewDetail />,
+            errorElement: (
+              <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="text-center">
+                  <h2 className="text-lg font-semibold text-slate-900 mb-2">
+                    Failed to load report
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => window.history.back()}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm"
+                  >
+                    Go Back
+                  </button>
+                </div>
+              </div>
+            ),
+          },
           { path: 'messages', element: <MessageLog /> },
           {
             path: 'reports/merchandiser',
@@ -117,3 +150,14 @@ export const router = createBrowserRouter([
   },
   { path: '*', element: <Navigate to="/" replace /> },
 ]);
+
+export function App() {
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+        <ToastContainer />
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+}

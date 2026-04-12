@@ -27,10 +27,11 @@ export function useReviewFlaggedCount(brandId?: string) {
 
 export function useReviewDetail(id: string | undefined) {
   return useQuery({
-    queryKey: ['review', 'detail', id],
-    queryFn:  () => reviewApi.getReport(id!),
-    enabled:  !!id,
+    queryKey:  ['review', 'detail', id],
+    queryFn:   () => reviewApi.getReport(id!),
+    enabled:   !!id && id !== 'undefined' && id !== 'null',
     staleTime: 30000,
+    retry:     1,
   })
 }
 

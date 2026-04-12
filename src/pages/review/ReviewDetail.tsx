@@ -85,6 +85,17 @@ export function ReviewDetail() {
       : undefined,
   });
 
+  const missingFields = useMemo(() => {
+    const extraction = message?.aiExtraction;
+    if (!extraction || typeof extraction !== 'object') return [];
+    const raw = (extraction as Record<string, unknown>).missing_fields;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((x): x is string => typeof x === 'string')
+      .map((x) => x.trim())
+      .filter(Boolean);
+  }, [message]);
+
   if (detailQ.isLoading || !id) {
     return (
       <div className="space-y-4">
@@ -116,17 +127,6 @@ export function ReviewDetail() {
   const conf = message?.aiConfidence ?? 0;
   const confColor =
     conf >= 0.85 ? 'text-emerald-600' : conf >= 0.65 ? 'text-amber-600' : 'text-red-600';
-
-  const missingFields = useMemo(() => {
-    const extraction = message?.aiExtraction;
-    if (!extraction || typeof extraction !== 'object') return [];
-    const raw = (extraction as Record<string, unknown>).missing_fields;
-    if (!Array.isArray(raw)) return [];
-    return raw
-      .filter((x): x is string => typeof x === 'string')
-      .map((x) => x.trim())
-      .filter(Boolean);
-  }, [message]);
 
   const onSaveHeader = form.handleSubmit((vals) => {
     updateM.mutate({
