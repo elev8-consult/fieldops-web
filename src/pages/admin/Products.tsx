@@ -429,7 +429,10 @@ export function Products() {
           />
           {expandedId && (
             <div className="border-t border-slate-100 bg-slate-50 p-4">
-              <p className="mb-2 text-sm font-medium text-slate-700">Aliases</p>
+              <p className="mb-2 text-sm font-medium text-slate-700">
+                Aliases for "
+                {rows.find((r) => r.id === expandedId)?.canonicalName ?? 'Product'}":
+              </p>
               {aliasesQ.isLoading ? (
                 <Skeleton className="h-8 w-full" />
               ) : (
@@ -469,7 +472,7 @@ export function Products() {
                   }}
                   loading={addAliasM.isPending}
                 >
-                  Add
+                  + Add alias manually
                 </Button>
               </div>
             </div>

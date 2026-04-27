@@ -213,6 +213,9 @@ export function ReviewDetail() {
             >
               <MerchandiserItemsTable
                 items={pr.reportData?.items ?? []}
+                onRefresh={() => {
+                  detailQ.refetch();
+                }}
                 onSaveItem={(itemId, body) => {
                   if (!pr.reportData?.id) return;
                   patchMerchItem.mutate({

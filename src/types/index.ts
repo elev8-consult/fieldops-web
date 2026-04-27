@@ -94,6 +94,7 @@ export interface ReportFlag {
   fieldName: string | null;
   severity: 'error' | 'warning' | 'info';
   message: string;
+  context?: string | null;
   status: 'open' | 'resolved' | 'dismissed';
   resolvedAt: string | null;
 }
@@ -158,6 +159,13 @@ export interface MerchandiserItem {
   expiryDate: string | null;
   expiryRaw: string | null;
   isProductMatched: boolean;
+  matchConfidence: number | null;
+  matchType: string | null;
+  matchSuggestions: Array<{
+    productId: string;
+    canonicalName: string;
+    confidence: number;
+  }>;
   product?: Product | null;
 }
 
@@ -178,6 +186,13 @@ export interface PromoterSaleItem {
   promoLabel: string | null;
   isOffer: boolean;
   isProductMatched: boolean;
+  matchConfidence: number | null;
+  matchType: string | null;
+  matchSuggestions: Array<{
+    productId: string;
+    canonicalName: string;
+    confidence: number;
+  }>;
   product?: Product | null;
 }
 
@@ -188,6 +203,13 @@ export interface PromoterSampleItem {
   quantity: number | null;
   availabilityNote: string | null;
   isProductMatched: boolean;
+  matchConfidence: number | null;
+  matchType: string | null;
+  matchSuggestions: Array<{
+    productId: string;
+    canonicalName: string;
+    confidence: number;
+  }>;
   product?: Product | null;
 }
 

@@ -85,3 +85,24 @@ export function useDismissFlag() {
     },
   })
 }
+
+export function useAcceptProductMatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      itemId,
+      productId,
+      rawName,
+      reportType,
+    }: {
+      itemId: string
+      productId: string
+      rawName: string
+      reportType: 'merchandiser' | 'promoter_sale' | 'promoter_sample'
+    }) =>
+      reviewApi.acceptMatch(itemId, { productId, rawName, reportType }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['review'] })
+    },
+  })
+}

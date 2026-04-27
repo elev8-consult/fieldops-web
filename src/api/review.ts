@@ -37,6 +37,15 @@ export const reviewApi = {
   dismissFlag: (flagId: string) =>
     api.patch(`/review/flags/${flagId}/dismiss`).then(r => r.data),
 
+  acceptMatch: (
+    itemId: string,
+    body: {
+      productId: string;
+      rawName: string;
+      reportType: 'merchandiser' | 'promoter_sale' | 'promoter_sample';
+    },
+  ) => api.post(`/review/items/${itemId}/accept-match`, body).then(r => r.data),
+
   getCount: (brandId?: string): Promise<number> =>
     api.get('/review/count', { params: { brand_id: brandId } }).then(r => r.data),
 }

@@ -90,6 +90,7 @@ export function normalizeFlag(raw: Record<string, unknown>): ReportFlag {
     fieldName: raw.fieldName != null ? String(raw.fieldName) : null,
     severity: raw.severity as ReportFlag['severity'],
     message: String(raw.message ?? ''),
+    context: raw.context != null ? String(raw.context) : null,
     status: raw.status as ReportFlag['status'],
     resolvedAt: raw.resolvedAt != null ? String(raw.resolvedAt) : null,
   };
@@ -128,6 +129,11 @@ export function normalizeParsedReport(raw: Record<string, unknown>): ParsedRepor
 
 export function normalizeMerchItem(raw: Record<string, unknown>): MerchandiserItem {
   const product = raw.product as Record<string, unknown> | null | undefined;
+  const suggestions = Array.isArray(raw.matchSuggestions)
+    ? (raw.matchSuggestions as Record<string, unknown>[])
+    : Array.isArray(raw.match_suggestions)
+      ? (raw.match_suggestions as Record<string, unknown>[])
+      : [];
   return {
     id: toIdString(raw.id),
     productNameRaw:
@@ -137,6 +143,23 @@ export function normalizeMerchItem(raw: Record<string, unknown>): MerchandiserIt
     expiryDate: raw.expiryDate != null ? String(raw.expiryDate) : null,
     expiryRaw: raw.expiryRaw != null ? String(raw.expiryRaw) : null,
     isProductMatched: Boolean(raw.isProductMatched),
+    matchConfidence:
+      raw.matchConfidence != null
+        ? Number(raw.matchConfidence)
+        : raw.match_confidence != null
+          ? Number(raw.match_confidence)
+          : null,
+    matchType:
+      raw.matchType != null
+        ? String(raw.matchType)
+        : raw.match_type != null
+          ? String(raw.match_type)
+          : null,
+    matchSuggestions: suggestions.map((s) => ({
+      productId: toIdString(s.productId ?? s.product_id),
+      canonicalName: String(s.canonicalName ?? s.canonical_name ?? ''),
+      confidence: Number(s.confidence ?? 0),
+    })),
     product: product ? normalizeProduct(product) : null,
   };
 }
@@ -158,6 +181,11 @@ export function normalizeMerchandiserReport(
 
 export function normalizeSaleItem(raw: Record<string, unknown>): PromoterSaleItem {
   const product = raw.product as Record<string, unknown> | null | undefined;
+  const suggestions = Array.isArray(raw.matchSuggestions)
+    ? (raw.matchSuggestions as Record<string, unknown>[])
+    : Array.isArray(raw.match_suggestions)
+      ? (raw.match_suggestions as Record<string, unknown>[])
+      : [];
   return {
     id: toIdString(raw.id),
     productNameRaw:
@@ -167,6 +195,23 @@ export function normalizeSaleItem(raw: Record<string, unknown>): PromoterSaleIte
     promoLabel: raw.promoLabel != null ? String(raw.promoLabel) : null,
     isOffer: Boolean(raw.isOffer),
     isProductMatched: Boolean(raw.isProductMatched),
+    matchConfidence:
+      raw.matchConfidence != null
+        ? Number(raw.matchConfidence)
+        : raw.match_confidence != null
+          ? Number(raw.match_confidence)
+          : null,
+    matchType:
+      raw.matchType != null
+        ? String(raw.matchType)
+        : raw.match_type != null
+          ? String(raw.match_type)
+          : null,
+    matchSuggestions: suggestions.map((s) => ({
+      productId: toIdString(s.productId ?? s.product_id),
+      canonicalName: String(s.canonicalName ?? s.canonical_name ?? ''),
+      confidence: Number(s.confidence ?? 0),
+    })),
     product: product ? normalizeProduct(product) : null,
   };
 }
@@ -175,6 +220,11 @@ export function normalizeSampleItem(
   raw: Record<string, unknown>,
 ): PromoterSampleItem {
   const product = raw.product as Record<string, unknown> | null | undefined;
+  const suggestions = Array.isArray(raw.matchSuggestions)
+    ? (raw.matchSuggestions as Record<string, unknown>[])
+    : Array.isArray(raw.match_suggestions)
+      ? (raw.match_suggestions as Record<string, unknown>[])
+      : [];
   return {
     id: toIdString(raw.id),
     productNameRaw:
@@ -184,6 +234,23 @@ export function normalizeSampleItem(
     availabilityNote:
       raw.availabilityNote != null ? String(raw.availabilityNote) : null,
     isProductMatched: Boolean(raw.isProductMatched),
+    matchConfidence:
+      raw.matchConfidence != null
+        ? Number(raw.matchConfidence)
+        : raw.match_confidence != null
+          ? Number(raw.match_confidence)
+          : null,
+    matchType:
+      raw.matchType != null
+        ? String(raw.matchType)
+        : raw.match_type != null
+          ? String(raw.match_type)
+          : null,
+    matchSuggestions: suggestions.map((s) => ({
+      productId: toIdString(s.productId ?? s.product_id),
+      canonicalName: String(s.canonicalName ?? s.canonical_name ?? ''),
+      confidence: Number(s.confidence ?? 0),
+    })),
     product: product ? normalizeProduct(product) : null,
   };
 }

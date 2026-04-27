@@ -55,6 +55,46 @@ export function FlagList({
                 <code className="mt-1 block text-xs opacity-80">{f.fieldName}</code>
               )}
               <p className="mt-2 text-sm">{f.message}</p>
+              {f.flagCode === 'UNRECOGNIZED_PRODUCT' && (
+                <div className="mt-2 text-xs">
+                  {(() => {
+                    try {
+                      const raw =
+                        typeof f.context === 'string' && f.context.trim().length > 0
+                          ? f.context
+                          : f.message.includes('{')
+                            ? f.message
+                            : '{}';
+                      const ctx = JSON.parse(raw) as {
+                        suggestions?: Array<{
+                          productId?: string;
+                          canonicalName?: string;
+                          canonical_name?: string;
+                          confidence?: number;
+                        }>;
+                      };
+                      const suggestions = Array.isArray(ctx.suggestions)
+                        ? ctx.suggestions
+                        : [];
+                      if (suggestions.length > 0) {
+                        const top = suggestions[0];
+                        const name = top.canonicalName ?? top.canonical_name ?? '—';
+                        const confidence = Math.round((top.confidence ?? 0) * 100);
+                        return (
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="text-slate-500">Best match:</span>
+                            <span className="font-medium text-slate-700">{name}</span>
+                            <span className="text-amber-600">{confidence}%</span>
+                          </div>
+                        );
+                      }
+                    } catch {
+                      // noop
+                    }
+                    return null;
+                  })()}
+                </div>
+              )}
               <div className="mt-2">
                 <Badge status={f.status}>{f.status}</Badge>
               </div>

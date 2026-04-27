@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Table, type TableColumn } from '@/components/ui/Table';
+import { useAcceptProductMatch } from '@/hooks/useReview';
 import { formatDate } from '@/lib/utils';
 import type { MerchandiserItem } from '@/types';
 import { CheckCircle2, Pencil, XCircle } from 'lucide-react';
@@ -10,6 +11,7 @@ import { isPast, parseISO } from 'date-fns';
 export interface MerchandiserItemsTableProps {
   items: MerchandiserItem[];
   reportId?: string;
+  onRefresh?: () => void;
   onSaveItem: (
     itemId: string,
     body: { productId?: number | null; quantity?: number | null; expiryDate?: string | null },
@@ -17,9 +19,90 @@ export interface MerchandiserItemsTableProps {
   savingId?: string | null;
 }
 
+interface MatchSuggestionProps {
+  itemId: string;
+  rawName: string;
+  suggestions: Array<{ productId: string; canonicalName: string; confidence: number }>;
+  onAccepted: () => void;
+}
+
+function MatchSuggestion({
+  itemId,
+  rawName,
+  suggestions,
+  onAccepted,
+}: MatchSuggestionProps) {
+  const [accepted, setAccepted] = useState(false);
+  const acceptMatch = useAcceptProductMatch();
+
+  if (accepted) {
+    return (
+      <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+        <CheckCircle2 className="w-3 h-3" /> Matched
+      </span>
+    );
+  }
+
+  if (suggestions.length === 0) {
+    return <span className="text-xs text-slate-400 italic">No suggestions</span>;
+  }
+
+  const top = suggestions[0];
+
+  const handleAccept = async () => {
+    try {
+      await acceptMatch.mutateAsync({
+        itemId,
+        productId: top.productId,
+        rawName,
+        reportType: 'merchandiser',
+      });
+      setAccepted(true);
+      onAccepted();
+    } catch (err) {
+      console.error('Failed to accept match', err);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <span
+          className="text-xs text-slate-600 max-w-[140px] truncate"
+          title={top.canonicalName}
+        >
+          {top.canonicalName}
+        </span>
+        <span
+          className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${
+            top.confidence >= 0.55
+              ? 'bg-amber-100 text-amber-700'
+              : 'bg-red-100 text-red-600'
+          }`}
+        >
+          {Math.round(top.confidence * 100)}%
+        </span>
+      </div>
+      <button
+        onClick={handleAccept}
+        disabled={acceptMatch.isPending}
+        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium text-left disabled:opacity-50 flex items-center gap-1"
+      >
+        {acceptMatch.isPending ? (
+          <span className="animate-spin">⏳</span>
+        ) : (
+          <CheckCircle2 className="w-3 h-3" />
+        )}
+        Accept & save alias
+      </button>
+    </div>
+  );
+}
+
 export function MerchandiserItemsTable({
   items,
   reportId: _reportId,
+  onRefresh,
   onSaveItem,
   savingId,
 }: MerchandiserItemsTableProps) {
@@ -94,6 +177,24 @@ export function MerchandiserItemsTable({
             <CheckCircle2 className="h-5 w-5 text-emerald-500" />
           ) : (
             <XCircle className="h-5 w-5 text-red-500" />
+          ),
+      },
+      {
+        key: 'closestMatch',
+        header: 'Closest Match',
+        render: (row) =>
+          row.isProductMatched ? (
+            <span className="flex items-center gap-1 text-emerald-600 text-sm">
+              <CheckCircle2 className="w-4 h-4" />
+              {row.product?.canonicalName ?? row.productNameRaw}
+            </span>
+          ) : (
+            <MatchSuggestion
+              itemId={row.id}
+              rawName={row.productNameRaw ?? ''}
+              suggestions={row.matchSuggestions ?? []}
+              onAccepted={() => onRefresh?.()}
+            />
           ),
       },
       {
