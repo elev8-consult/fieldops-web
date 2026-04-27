@@ -247,3 +247,50 @@ export interface TopFlaggedProduct {
   product_name_raw: string;
   count:            number;
 }
+
+export interface MerchandiserDashboardParams {
+  brandId: string;
+  dateFrom?: string;
+  dateTo?: string;
+  status?: 'approved' | 'flagged' | 'all';
+}
+
+export interface MerchandiserDashboardBatch {
+  quantity: number | null;
+  expiryDate: string | null;
+  expiryRaw: string | null;
+}
+
+export interface MerchandiserDashboardCell {
+  quantity: number | null;
+  reportDate: string;
+  reportId: string;
+  expiryDate: string | null;
+  expiryRaw: string | null;
+  hasMultipleBatches: boolean;
+  batches: MerchandiserDashboardBatch[];
+  status: 'approved' | 'flagged';
+}
+
+export interface MerchandiserDashboardRow {
+  outletId: string;
+  outletName: string;
+  isDepot: boolean;
+  cells: Record<string, MerchandiserDashboardCell>;
+}
+
+export interface MerchandiserDashboardResponse {
+  brand: { id: string; name: string; slug: string };
+  dateRange: { from: string; to: string };
+  products: Array<{ id: string; name: string }>;
+  outlets: Array<{ id: string; name: string; isDepot: boolean }>;
+  rows: MerchandiserDashboardRow[];
+  summary: {
+    totalReports: number;
+    totalOutlets: number;
+    totalProducts: number;
+    approvedCount: number;
+    flaggedCount: number;
+    lastReportDate: string | null;
+  };
+}

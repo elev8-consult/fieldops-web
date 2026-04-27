@@ -4,6 +4,7 @@ import { Outlets } from '@/pages/admin/Outlets';
 import { Products } from '@/pages/admin/Products';
 import { Users } from '@/pages/admin/Users';
 import { Dashboard } from '@/pages/Dashboard';
+import { MerchandiserDashboard } from '@/pages/dashboard/MerchandiserDashboard';
 import { Login } from '@/pages/Login';
 import { MessageLog } from '@/pages/messages/MessageLog';
 import { MerchandiserReportDetail } from '@/pages/reports/MerchandiserReportDetail';
@@ -96,6 +97,10 @@ export const router = createBrowserRouter([
             ),
           },
           { path: 'messages', element: <MessageLog /> },
+          {
+            path: 'dashboard/merchandiser',
+            element: <MerchandiserDashboard />,
+          },
           {
             path: 'reports/merchandiser',
             element: <MerchandiserReports />,

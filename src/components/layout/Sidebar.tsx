@@ -7,6 +7,7 @@ import {
   Building2,
   ClipboardCheck,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
   MapPin,
   MessageSquare,
@@ -56,6 +57,13 @@ export function Sidebar() {
         <NavLink to="/" end className={navClass}>
           <LayoutDashboard className="h-5 w-5 shrink-0" />
           Dashboard
+        </NavLink>
+        <p className="px-6 pt-3 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Dashboard
+        </p>
+        <NavLink to="/dashboard/merchandiser" className={navClass}>
+          <LayoutGrid className="h-5 w-5 shrink-0" />
+          Stock Dashboard
         </NavLink>
         <NavLink to="/review" className={navClass}>
           <ClipboardCheck className="h-5 w-5 shrink-0" />
