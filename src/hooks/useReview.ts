@@ -5,6 +5,7 @@ export function useReviewQueue(filters?: {
   brand_id?:    string
   report_type?: string
   status?:      string
+  search?:      string
   page?:        number
   limit?:       number
 }) {

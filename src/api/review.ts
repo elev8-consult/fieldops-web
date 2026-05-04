@@ -5,6 +5,7 @@ export interface ReviewQueueParams {
   brand_id?:    string
   report_type?: string
   status?:      string
+  search?:      string
   page?:        number
   limit?:       number
 }
@@ -14,6 +15,7 @@ export const reviewApi = {
     brand_id?:    string
     report_type?: string
     status?:      string
+    search?:      string
     page?:        number
     limit?:       number
   }): Promise<PaginatedResponse<ParsedReport>> =>

@@ -7,6 +7,7 @@ import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Table, type TableColumn } from '@/components/ui/Table';
 import api from '@/api/axios';
+import { fetchMessage } from '@/api/messages';
 import { useMessages } from '@/hooks/useMessages';
 import { formatConfidence, formatDateTime, formatRelative, getAxiosMessage } from '@/lib/utils';
 import type { Brand, WhatsappMessage } from '@/types';
@@ -31,7 +32,7 @@ export function MessageLog() {
   const [reportType, setReportType] = useState('');
   const [senderPhone, setSenderPhone] = useState('');
   const [brandId, setBrandId] = useState<string | undefined>(undefined);
-  const [selected, setSelected] = useState<WhatsappMessage | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState('receivedAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -56,6 +57,16 @@ export function MessageLog() {
   });
 
   const rows = q.data?.data ?? [];
+  const selectedFromList = selectedId
+    ? rows.find((row) => String(row.id) === selectedId) ?? null
+    : null;
+  const detailQ = useQuery({
+    queryKey: ['messages', 'detail', selectedId],
+    queryFn: () => fetchMessage(selectedId!),
+    enabled: !!selectedId,
+    staleTime: 30_000,
+  });
+  const selected = detailQ.data ?? selectedFromList;
   const sorted = useMemo(() => {
     const list = [...rows];
     list.sort((a, b) => {
@@ -156,7 +167,7 @@ export function MessageLog() {
             aria-label="View message"
             onClick={(e) => {
               e.stopPropagation();
-              setSelected(row);
+              setSelectedId(String(row.id));
             }}
           >
             <Eye className="h-4 w-4" />
@@ -308,7 +319,7 @@ export function MessageLog() {
                 setSortDir('asc');
               }
             }}
-            onRowClick={(row) => setSelected(row)}
+            onRowClick={(row) => setSelectedId(String(row.id))}
           />
           <Pagination
             page={page}
@@ -326,7 +337,7 @@ export function MessageLog() {
               type="button"
               className="fixed inset-0 z-40 bg-black/40"
               aria-label="Close panel"
-              onClick={() => setSelected(null)}
+              onClick={() => setSelectedId(null)}
             />
             <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-lg flex-col border-l border-slate-200 bg-white shadow-xl">
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
@@ -334,7 +345,7 @@ export function MessageLog() {
                 <button
                   type="button"
                   className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-                  onClick={() => setSelected(null)}
+                  onClick={() => setSelectedId(null)}
                 >
                   <X className="h-5 w-5" />
                 </button>

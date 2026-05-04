@@ -49,18 +49,8 @@ export function ReviewQueue() {
     status: status || undefined,
     report_type: reportType || undefined,
     brand_id: brandFilter,
+    search: search.trim() || undefined,
   });
-
-  const filtered = useMemo(() => {
-    const rows = query.data?.data ?? [];
-    if (!search.trim()) return rows;
-    const q = search.toLowerCase();
-    return rows.filter(
-      (r) =>
-        (r.locationRaw ?? '').toLowerCase().includes(q) ||
-        (r.nameRaw ?? '').toLowerCase().includes(q),
-    );
-  }, [query.data?.data, search]);
 
   if (query.isError) {
     return (
@@ -93,7 +83,8 @@ export function ReviewQueue() {
     );
   }
 
-  const total = search.trim() ? filtered.length : (query.data?.total ?? 0);
+  const rows = query.data?.data ?? [];
+  const total = query.data?.total ?? 0;
 
   return (
     <div className="space-y-6">
@@ -144,7 +135,7 @@ export function ReviewQueue() {
         <p className="text-sm text-slate-500">{total} reports found</p>
       </div>
 
-      {!filtered.length ? (
+      {!rows.length ? (
         <div className="rounded-xl border border-slate-100 bg-white py-12 shadow-sm">
           <div className="flex flex-col items-center">
             <ClipboardCheck className="mb-4 h-12 w-12 text-slate-300" />
@@ -156,7 +147,7 @@ export function ReviewQueue() {
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map((r: ParsedReport) => (
+          {rows.map((r: ParsedReport) => (
             // Queue rows are flat; resolve brand name from brandId where possible
             <ReviewCard
               key={r.id}
@@ -170,7 +161,7 @@ export function ReviewQueue() {
         </div>
       )}
 
-      {!search.trim() && query.data && (
+      {query.data && (
         <Pagination
           page={query.data.page}
           limit={query.data.limit}
