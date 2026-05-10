@@ -18,9 +18,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target:       'https://fieldops-api-production.up.railway.app',
+        target:
+          process.env.VITE_PROXY_TARGET ??
+          'http://localhost:3000',
         changeOrigin: true,
-        secure:       true,
+        secure:       false,
       },
     },
   },
