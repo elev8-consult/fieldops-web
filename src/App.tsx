@@ -5,6 +5,7 @@ import { Products } from '@/pages/admin/Products';
 import { Users } from '@/pages/admin/Users';
 import { Dashboard } from '@/pages/Dashboard';
 import { MerchandiserDashboard } from '@/pages/dashboard/MerchandiserDashboard';
+import { PromoterDashboard } from '@/pages/dashboard/PromoterDashboard';
 import { Login } from '@/pages/Login';
 import { MessageLog } from '@/pages/messages/MessageLog';
 import { MerchandiserReportDetail } from '@/pages/reports/MerchandiserReportDetail';
@@ -100,6 +101,10 @@ export const router = createBrowserRouter([
           {
             path: 'dashboard/merchandiser',
             element: <MerchandiserDashboard />,
+          },
+          {
+            path: 'dashboard/promoter',
+            element: <PromoterDashboard />,
           },
           {
             path: 'reports/merchandiser',

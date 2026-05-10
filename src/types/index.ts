@@ -316,3 +316,95 @@ export interface MerchandiserDashboardResponse {
     lastReportDate: string | null;
   };
 }
+
+export interface PromoterDashboardParams {
+  brand_id?: string;
+  date_from?: string;
+  date_to?: string;
+  status?: Array<'draft' | 'pending_review' | 'approved' | 'rejected' | 'reviewed'>;
+  outlet_id?: string;
+  reported_by?: string;
+}
+
+export interface PromoterDashboardProduct {
+  id: string;
+  canonical_name: string;
+  is_offer: boolean;
+}
+
+export interface PromoterDashboardRow {
+  outlet_id: string;
+  outlet_name: string;
+  outlet_type: string;
+  has_flags: boolean;
+  flag_messages: string[];
+  pending_review: boolean;
+  cells: Record<string, Record<string, number>>;
+  palette: Record<string, number>;
+  gifts: Record<string, number>;
+  row_total: number;
+}
+
+export interface PromoterDashboardGridResponse {
+  dates: string[];
+  products: PromoterDashboardProduct[];
+  rows: PromoterDashboardRow[];
+  column_totals: Record<string, number> & {
+    palette: number;
+    gifts: number;
+    grand_total: number;
+  };
+}
+
+export interface PromoterDashboardSummaryResponse {
+  outlets_visited: number;
+  units_sold: number;
+  samples_given: number;
+  persons_contacted: number;
+  persons_tasted: number;
+}
+
+export interface PromoterDashboardFilterOptions {
+  statuses: Array<'draft' | 'pending_review' | 'approved' | 'rejected' | 'reviewed'>;
+  outlets: Array<{ id: string; name: string }>;
+  promoters: Array<{ id: string; full_name: string }>;
+}
+
+export interface PromoterOutletReportDetail {
+  report_id: string;
+  report_date: string;
+  status: string;
+  promoter: { id: string | null; full_name: string | null };
+  persons_contacted: number;
+  persons_tasted: number;
+  feedback_text: string | null;
+  most_asked_question: string | null;
+  sales: Array<{
+    id: string;
+    product_name: string | null;
+    quantity: number;
+    is_offer: boolean;
+    promo_label: string | null;
+  }>;
+  samples: Array<{
+    id: string;
+    product_name: string | null;
+    quantity: number;
+  }>;
+  flags: Array<{
+    id: string;
+    severity: string;
+    status: string;
+    message: string;
+  }>;
+}
+
+export interface PromoterOutletReportsResponse {
+  outlet: {
+    id: string;
+    name: string;
+    type: string;
+    region: string | null;
+  };
+  reports: PromoterOutletReportDetail[];
+}

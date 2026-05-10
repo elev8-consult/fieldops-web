@@ -65,6 +65,10 @@ export function Sidebar() {
           <LayoutGrid className="h-5 w-5 shrink-0" />
           Stock Dashboard
         </NavLink>
+        <NavLink to="/dashboard/promoter" className={navClass}>
+          <LayoutGrid className="h-5 w-5 shrink-0" />
+          Promoter Dashboard
+        </NavLink>
         <NavLink to="/review" className={navClass}>
           <ClipboardCheck className="h-5 w-5 shrink-0" />
           <span className="flex flex-1 items-center justify-between gap-2">
