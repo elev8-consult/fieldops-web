@@ -1,5 +1,6 @@
 import type {
   Brand,
+  MerchandiserReportItemBatch,
   MerchandiserItem,
   MerchandiserReport,
   Outlet,
@@ -11,6 +12,7 @@ import type {
   PromoterSampleItem,
   ReportFlag,
   User,
+  UnknownSender,
   WhatsappMessage,
 } from '@/types';
 import { toIdString } from '@/lib/utils';
@@ -26,6 +28,7 @@ export function normalizeUser(raw: Record<string, unknown>): User {
       raw.whatsappPhone != null ? String(raw.whatsappPhone) : null,
     isActive: Boolean(raw.isActive ?? true),
     createdAt: String(raw.createdAt ?? ''),
+    updatedAt: String(raw.updatedAt ?? ''),
   };
 }
 
@@ -36,6 +39,7 @@ export function normalizeBrand(raw: Record<string, unknown>): Brand {
     slug: String(raw.slug ?? ''),
     isActive: Boolean(raw.isActive ?? true),
     createdAt: String(raw.createdAt ?? ''),
+    updatedAt: String(raw.updatedAt ?? ''),
   };
 }
 
@@ -49,11 +53,14 @@ export function normalizeOutlet(raw: Record<string, unknown>): Outlet {
     regionId: raw.regionId != null ? toIdString(raw.regionId) : null,
     address: raw.address != null ? String(raw.address) : null,
     isActive: Boolean(raw.isActive ?? true),
+    createdAt: String(raw.createdAt ?? ''),
+    updatedAt: String(raw.updatedAt ?? ''),
     region: region
       ? {
           id: toIdString(region.id),
           name: String(region.name ?? ''),
           country: String(region.country ?? ''),
+          createdAt: String(region.createdAt ?? ''),
         }
       : undefined,
   };
@@ -69,6 +76,9 @@ export function normalizeProduct(raw: Record<string, unknown>): Product {
     flow: raw.flow as Product['flow'],
     unit: raw.unit != null ? String(raw.unit) : null,
     isActive: Boolean(raw.isActive ?? true),
+    sortOrder: Number(raw.sortOrder ?? raw.sort_order ?? 0),
+    createdAt: String(raw.createdAt ?? ''),
+    updatedAt: String(raw.updatedAt ?? ''),
     brand: brand ? normalizeBrand(brand) : undefined,
   };
 }
@@ -78,6 +88,12 @@ export function normalizeProductAlias(raw: Record<string, unknown>): ProductAlia
     id: toIdString(raw.id),
     productId: toIdString(raw.productId),
     alias: String(raw.alias ?? ''),
+    createdBy:
+      raw.createdBy != null
+        ? toIdString(raw.createdBy)
+        : raw.createdById != null
+          ? toIdString(raw.createdById)
+          : null,
     createdAt: String(raw.createdAt ?? ''),
   };
 }
@@ -90,9 +106,15 @@ export function normalizeFlag(raw: Record<string, unknown>): ReportFlag {
     fieldName: raw.fieldName != null ? String(raw.fieldName) : null,
     severity: raw.severity as ReportFlag['severity'],
     message: String(raw.message ?? ''),
-    context: raw.context != null ? String(raw.context) : null,
     status: raw.status as ReportFlag['status'],
+    resolvedBy:
+      raw.resolvedBy != null
+        ? toIdString(raw.resolvedBy)
+        : raw.resolvedById != null
+          ? toIdString(raw.resolvedById)
+          : null,
     resolvedAt: raw.resolvedAt != null ? String(raw.resolvedAt) : null,
+    createdAt: String(raw.createdAt ?? ''),
   };
 }
 
@@ -121,6 +143,7 @@ export function normalizeParsedReport(raw: Record<string, unknown>): ParsedRepor
     nameRaw: raw.nameRaw != null ? String(raw.nameRaw) : null,
     isDepotReport: Boolean(raw.isDepotReport),
     createdAt: String(raw.createdAt ?? ''),
+    updatedAt: String(raw.updatedAt ?? ''),
     flags: flags?.map((f) => normalizeFlag(f)),
     brand: brand ? normalizeBrand(brand) : undefined,
     outlet: outlet ? normalizeOutlet(outlet) : null,
@@ -134,10 +157,23 @@ export function normalizeMerchItem(raw: Record<string, unknown>): MerchandiserIt
     : Array.isArray(raw.match_suggestions)
       ? (raw.match_suggestions as Record<string, unknown>[])
       : [];
+  const batchesRaw = Array.isArray(raw.batches)
+    ? (raw.batches as Record<string, unknown>[])
+    : [];
+  const batches: MerchandiserReportItemBatch[] = batchesRaw.map((batch) => ({
+    id: toIdString(batch.id),
+    reportItemId: toIdString(batch.reportItemId ?? batch.report_item_id),
+    quantity: batch.quantity != null ? Number(batch.quantity) : null,
+    expiryDate: batch.expiryDate != null ? String(batch.expiryDate) : null,
+    expiryRaw: batch.expiryRaw != null ? String(batch.expiryRaw) : null,
+    createdAt: String(batch.createdAt ?? ''),
+  }));
   return {
     id: toIdString(raw.id),
-    productNameRaw:
-      raw.productNameRaw != null ? String(raw.productNameRaw) : null,
+    merchandiserReportId: toIdString(
+      raw.merchandiserReportId ?? raw.merchandiser_report_id,
+    ),
+    productNameRaw: String(raw.productNameRaw ?? raw.product_name_raw ?? ''),
     productId: raw.productId != null ? toIdString(raw.productId) : null,
     quantity: raw.quantity != null ? Number(raw.quantity) : null,
     expiryDate: raw.expiryDate != null ? String(raw.expiryDate) : null,
@@ -160,6 +196,7 @@ export function normalizeMerchItem(raw: Record<string, unknown>): MerchandiserIt
       canonicalName: String(s.canonicalName ?? s.canonical_name ?? ''),
       confidence: Number(s.confidence ?? 0),
     })),
+    batches,
     product: product ? normalizeProduct(product) : null,
   };
 }
@@ -188,8 +225,8 @@ export function normalizeSaleItem(raw: Record<string, unknown>): PromoterSaleIte
       : [];
   return {
     id: toIdString(raw.id),
-    productNameRaw:
-      raw.productNameRaw != null ? String(raw.productNameRaw) : null,
+    promoterReportId: toIdString(raw.promoterReportId ?? raw.promoter_report_id),
+    productNameRaw: String(raw.productNameRaw ?? raw.product_name_raw ?? ''),
     productId: raw.productId != null ? toIdString(raw.productId) : null,
     quantity: raw.quantity != null ? Number(raw.quantity) : null,
     promoLabel: raw.promoLabel != null ? String(raw.promoLabel) : null,
@@ -227,8 +264,8 @@ export function normalizeSampleItem(
       : [];
   return {
     id: toIdString(raw.id),
-    productNameRaw:
-      raw.productNameRaw != null ? String(raw.productNameRaw) : null,
+    promoterReportId: toIdString(raw.promoterReportId ?? raw.promoter_report_id),
+    productNameRaw: String(raw.productNameRaw ?? raw.product_name_raw ?? ''),
     productId: raw.productId != null ? toIdString(raw.productId) : null,
     quantity: raw.quantity != null ? Number(raw.quantity) : null,
     availabilityNote:
@@ -331,5 +368,36 @@ export function normalizeMessage(raw: Record<string, unknown>): WhatsappMessage 
     aiExtraction: (raw.aiExtraction as Record<string, unknown> | null) ?? null,
     receivedAt: String(raw.receivedAt ?? ''),
     processedAt: raw.processedAt != null ? String(raw.processedAt) : null,
+    reviewedAt: raw.reviewedAt != null ? String(raw.reviewedAt) : null,
+    createdAt: String(raw.createdAt ?? ''),
+    updatedAt: String(raw.updatedAt ?? ''),
+  };
+}
+
+export function normalizeUnknownSender(raw: Record<string, unknown>): UnknownSender {
+  return {
+    id: toIdString(raw.id),
+    senderPhone: String(raw.senderPhone ?? raw.sender_phone ?? ''),
+    senderName:
+      raw.senderName != null
+        ? String(raw.senderName)
+        : raw.sender_name != null
+          ? String(raw.sender_name)
+          : null,
+    seenCount: Number(raw.seenCount ?? raw.seen_count ?? 1),
+    firstSeenAt: String(raw.firstSeenAt ?? raw.first_seen_at ?? ''),
+    lastSeenAt: String(raw.lastSeenAt ?? raw.last_seen_at ?? ''),
+    resolvedBrandId:
+      raw.resolvedBrandId != null
+        ? toIdString(raw.resolvedBrandId)
+        : raw.resolved_brand_id != null
+          ? toIdString(raw.resolved_brand_id)
+          : null,
+    resolvedAt:
+      raw.resolvedAt != null
+        ? String(raw.resolvedAt)
+        : raw.resolved_at != null
+          ? String(raw.resolved_at)
+          : null,
   };
 }

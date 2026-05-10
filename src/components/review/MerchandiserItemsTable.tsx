@@ -14,7 +14,7 @@ export interface MerchandiserItemsTableProps {
   onRefresh?: () => void;
   onSaveItem: (
     itemId: string,
-    body: { productId?: number | null; quantity?: number | null; expiryDate?: string | null },
+    body: { productId?: string | null; quantity?: number | null; expiryDate?: string | null },
   ) => void;
   savingId?: string | null;
 }
@@ -195,6 +195,50 @@ export function MerchandiserItemsTable({
               suggestions={row.matchSuggestions ?? []}
               onAccepted={() => onRefresh?.()}
             />
+          ),
+      },
+      {
+        key: 'matchType',
+        header: 'Match',
+        render: (row) => {
+          const matchType = row.matchType;
+          const className =
+            matchType === 'exact'
+              ? 'bg-emerald-100 text-emerald-700'
+              : matchType === 'alias'
+                ? 'bg-blue-100 text-blue-700'
+                : matchType === 'fuzzy'
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-slate-100 text-slate-500';
+          return (
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${className}`}>
+              {matchType ?? 'unmatched'}
+            </span>
+          );
+        },
+      },
+      {
+        key: 'matchConfidence',
+        header: 'Confidence',
+        render: (row) =>
+          row.matchConfidence != null
+            ? `${Math.round(Number(row.matchConfidence) * 100)}%`
+            : '—',
+      },
+      {
+        key: 'batches',
+        header: 'Batches',
+        render: (row) =>
+          row.batches && row.batches.length > 0 ? (
+            <ul className="space-y-1 text-xs text-slate-600">
+              {row.batches.map((batch, idx) => (
+                <li key={batch.id}>
+                  #{idx + 1}: qty {batch.quantity ?? '—'}, exp {formatDate(batch.expiryDate)}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            '—'
           ),
       },
       {

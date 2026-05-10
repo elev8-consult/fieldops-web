@@ -1,4 +1,5 @@
 import { useReviewFlaggedCount } from '@/hooks/useReview';
+import { useUnknownSenderUnresolvedCount } from '@/hooks/useUnknownSenders';
 import { ROLES } from '@/lib/constants';
 import { getInitials } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
@@ -13,6 +14,7 @@ import {
   MessageSquare,
   Package,
   Tag,
+  UserRoundX,
   UserCog,
   Users,
 } from 'lucide-react';
@@ -34,10 +36,11 @@ export function Sidebar() {
 
   const brandIdForCount =
     user?.role === ROLES.BRAND_MANAGER ? user.brandId ?? undefined : undefined;
-  const { data: flaggedCount = 0 } = useReviewFlaggedCount(brandIdForCount);
-
   const showAdmin =
     hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.BRAND_MANAGER);
+  const { data: flaggedCount = 0 } = useReviewFlaggedCount(brandIdForCount);
+  const { data: unknownSendersCount = 0 } =
+    useUnknownSenderUnresolvedCount(showAdmin);
 
   return (
     <aside className="flex w-64 shrink-0 flex-col bg-slate-900">
@@ -116,6 +119,17 @@ export function Sidebar() {
             <NavLink to="/admin/products" className={navClass}>
               <Tag className="h-5 w-5 shrink-0" />
               Products
+            </NavLink>
+            <NavLink to="/admin/unknown-senders" className={navClass}>
+              <UserRoundX className="h-5 w-5 shrink-0" />
+              <span className="flex flex-1 items-center justify-between gap-2">
+                Unknown Senders
+                {unknownSendersCount > 0 && (
+                  <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white">
+                    {unknownSendersCount > 99 ? '99+' : unknownSendersCount}
+                  </span>
+                )}
+              </span>
             </NavLink>
           </>
         )}

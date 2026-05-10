@@ -2,6 +2,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Brands } from '@/pages/admin/Brands';
 import { Outlets } from '@/pages/admin/Outlets';
 import { Products } from '@/pages/admin/Products';
+import { UnknownSenders } from '@/pages/admin/UnknownSenders';
 import { Users } from '@/pages/admin/Users';
 import { Dashboard } from '@/pages/Dashboard';
 import { MerchandiserDashboard } from '@/pages/dashboard/MerchandiserDashboard';
@@ -148,6 +149,14 @@ export const router = createBrowserRouter([
               <SuperAdminOnly>
                 <Users />
               </SuperAdminOnly>
+            ),
+          },
+          {
+            path: 'admin/unknown-senders',
+            element: (
+              <BrandManagerPlus>
+                <UnknownSenders />
+              </BrandManagerPlus>
             ),
           },
           {

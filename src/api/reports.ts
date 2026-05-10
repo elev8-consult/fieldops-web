@@ -71,7 +71,7 @@ export async function patchMerchandiserItem(
   reportId: string,
   itemId: string,
   body: {
-    productId?: number | null;
+    productId?: string | null;
     quantity?: number | null;
     expiryDate?: string | null;
   },
@@ -98,7 +98,7 @@ export async function patchPromoterSaleItem(
   reportId: string,
   itemId: string,
   body: {
-    productId?: number | null;
+    productId?: string | null;
     quantity?: number | null;
     promoLabel?: string | null;
     isOffer?: boolean;
@@ -111,7 +111,7 @@ export async function patchPromoterSampleItem(
   reportId: string,
   itemId: string,
   body: {
-    productId?: number | null;
+    productId?: string | null;
     quantity?: number | null;
     availabilityNote?: string | null;
   },

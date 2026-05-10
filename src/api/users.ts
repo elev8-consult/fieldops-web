@@ -20,7 +20,7 @@ export async function createUser(body: {
   email: string;
   password: string;
   role: User['role'];
-  brandId?: number | null;
+  brandId?: string | null;
 }): Promise<User> {
   const { data } = await api.post<Record<string, unknown>>('/users', body);
   return normalizeUser(data);
@@ -34,7 +34,7 @@ export async function updateUser(
     email: string;
     password: string;
     role: User['role'];
-    brandId: number | null;
+    brandId: string | null;
     isActive: boolean;
   }>,
 ): Promise<User> {

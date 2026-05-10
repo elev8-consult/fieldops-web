@@ -71,6 +71,34 @@ export function MerchandiserReportDetail() {
             <XCircle className="h-5 w-5 text-red-500" />
           ),
       },
+      {
+        key: 'matchType',
+        header: 'Match',
+        render: (row) => {
+          const matchType = row.matchType;
+          const className =
+            matchType === 'exact'
+              ? 'bg-emerald-100 text-emerald-700'
+              : matchType === 'alias'
+                ? 'bg-blue-100 text-blue-700'
+                : matchType === 'fuzzy'
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-slate-100 text-slate-500';
+          return (
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${className}`}>
+              {matchType ?? 'unmatched'}
+            </span>
+          );
+        },
+      },
+      {
+        key: 'matchConfidence',
+        header: 'Confidence',
+        render: (row) =>
+          row.matchConfidence != null
+            ? `${Math.round(Number(row.matchConfidence) * 100)}%`
+            : '—',
+      },
     ],
     [],
   );
@@ -169,6 +197,25 @@ export function MerchandiserReportDetail() {
             }
           }}
         />
+        <div className="mt-4 space-y-3">
+          {sortedItems
+            .filter((item) => (item.batches?.length ?? 0) > 0)
+            .map((item) => (
+              <div key={`${item.id}-batches`} className="rounded-lg border border-slate-100 p-3">
+                <p className="mb-2 text-sm font-medium text-slate-700">
+                  {item.productNameRaw} batches
+                </p>
+                <ul className="space-y-1 text-sm text-slate-600">
+                  {(item.batches ?? []).map((batch, idx) => (
+                    <li key={batch.id}>
+                      Batch #{idx + 1} — qty: {batch.quantity ?? '—'}, expiry:{' '}
+                      {formatDate(batch.expiryDate)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+        </div>
       </Card>
 
       <Card title="Flags" padding>

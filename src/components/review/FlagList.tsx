@@ -60,11 +60,9 @@ export function FlagList({
                   {(() => {
                     try {
                       const raw =
-                        typeof f.context === 'string' && f.context.trim().length > 0
-                          ? f.context
-                          : f.message.includes('{')
-                            ? f.message
-                            : '{}';
+                        typeof f.message === 'string' && f.message.includes('{')
+                          ? f.message
+                          : '{}';
                       const ctx = JSON.parse(raw) as {
                         suggestions?: Array<{
                           productId?: string;

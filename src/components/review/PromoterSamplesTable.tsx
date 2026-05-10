@@ -11,7 +11,7 @@ export interface PromoterSamplesTableProps {
   onSaveItem: (
     itemId: string,
     body: {
-      productId?: number | null;
+      productId?: string | null;
       quantity?: number | null;
       availabilityNote?: string | null;
     },
@@ -71,6 +71,19 @@ export function PromoterSamplesTable({
         key: 'matched',
         header: 'Matched',
         render: (row) => (row.isProductMatched ? 'Yes' : 'No'),
+      },
+      {
+        key: 'matchType',
+        header: 'Match',
+        render: (row) => row.matchType ?? 'unmatched',
+      },
+      {
+        key: 'matchConfidence',
+        header: 'Confidence',
+        render: (row) =>
+          row.matchConfidence != null
+            ? `${Math.round(Number(row.matchConfidence) * 100)}%`
+            : '—',
       },
       {
         key: 'act',

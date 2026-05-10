@@ -182,7 +182,7 @@ export function Users() {
       (u) =>
         !search ||
         u.fullName.toLowerCase().includes(search.toLowerCase()) ||
-        u.email.toLowerCase().includes(search.toLowerCase()) ||
+        (u.email ?? '').toLowerCase().includes(search.toLowerCase()) ||
         (u.whatsappPhone ?? '').includes(search),
     );
     list.sort((a, b) => {
@@ -192,8 +192,8 @@ export function Users() {
         av = a.fullName;
         bv = b.fullName;
       } else if (sortKey === 'email') {
-        av = a.email;
-        bv = b.email;
+        av = a.email ?? '';
+        bv = b.email ?? '';
       }
       if (av < bv) return sortDir === 'asc' ? -1 : 1;
       if (av > bv) return sortDir === 'asc' ? 1 : -1;
@@ -212,14 +212,14 @@ export function Users() {
       },
       {
         key: 'phone',
-        header: 'Phone',
+        header: 'WhatsApp',
         render: (row) => row.whatsappPhone ?? '—',
       },
       {
         key: 'email',
         header: 'Email',
         sortable: true,
-        render: (row) => row.email,
+        render: (row) => row.email ?? '—',
       },
       {
         key: 'role',
@@ -253,7 +253,7 @@ export function Users() {
                 editForm.reset({
                   fullName: row.fullName,
                   whatsappPhone: row.whatsappPhone ?? '',
-                  email: row.email,
+                  email: row.email ?? '',
                   password: '',
                   role: row.role,
                   brandId: row.brandId ?? '',
@@ -299,7 +299,7 @@ export function Users() {
       email: vals.email,
       password: vals.password,
       role: vals.role,
-      brandId: vals.brandId ? Number(vals.brandId) : null,
+      brandId: vals.brandId || null,
     });
   });
 
@@ -310,7 +310,7 @@ export function Users() {
       whatsappPhone: vals.whatsappPhone || null,
       email: vals.email,
       role: vals.role,
-      brandId: vals.brandId ? Number(vals.brandId) : null,
+      brandId: vals.brandId || null,
       isActive: vals.isActive,
     };
     if (vals.password && vals.password.length >= 8) {
@@ -350,7 +350,7 @@ export function Users() {
           label="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Name, email, phone"
+          placeholder="Name, email, WhatsApp"
           className="max-w-md"
         />
         <Button leftIcon={<Plus className="h-4 w-4" />} onClick={openCreate}>

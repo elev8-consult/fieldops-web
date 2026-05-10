@@ -1,19 +1,34 @@
-export interface User {
-  id: string;
-  fullName: string;
-  email: string;
-  role:
-    | 'super_admin'
-    | 'brand_manager'
-    | 'supervisor'
-    | 'reviewer'
-    | 'promoter'
-    | 'merchandiser';
-  brandId: string | null;
-  whatsappPhone: string | null;
-  isActive: boolean;
-  createdAt: string;
-}
+export type UserRole =
+  | 'super_admin'
+  | 'brand_manager'
+  | 'supervisor'
+  | 'promoter'
+  | 'merchandiser'
+  | 'reviewer';
+export type OutletType =
+  | 'supermarket'
+  | 'minimarket'
+  | 'hypermarket'
+  | 'depot'
+  | 'other';
+export type ProductFlow = 'merchandiser' | 'promoter' | 'both';
+export type MessageStatus =
+  | 'received'
+  | 'processing'
+  | 'parsed'
+  | 'flagged'
+  | 'reviewed'
+  | 'rejected'
+  | 'duplicate';
+export type ReportType = 'merchandiser' | 'promoter' | 'unknown';
+export type ParsedReportStatus =
+  | 'draft'
+  | 'pending_review'
+  | 'approved'
+  | 'rejected'
+  | 'archived';
+export type FlagSeverity = 'info' | 'warning' | 'error';
+export type FlagStatus = 'open' | 'resolved' | 'ignored';
 
 export interface Brand {
   id: string;
@@ -21,22 +36,38 @@ export interface Brand {
   slug: string;
   isActive: boolean;
   createdAt: string;
+  updatedAt: string;
+}
+
+export interface User {
+  id: string;
+  fullName: string;
+  whatsappPhone: string | null;
+  email: string | null;
+  role: UserRole;
+  brandId: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Region {
   id: string;
   name: string;
   country: string;
+  createdAt: string;
 }
 
 export interface Outlet {
   id: string;
   name: string;
-  type: 'supermarket' | 'minimarket' | 'hypermarket' | 'depot' | 'other';
+  type: OutletType;
   isDepot: boolean;
   regionId: string | null;
   address: string | null;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
   region?: Region;
 }
 
@@ -45,9 +76,12 @@ export interface Product {
   brandId: string;
   canonicalName: string;
   sku: string | null;
-  flow: 'merchandiser' | 'promoter' | 'both';
+  flow: ProductFlow;
   unit: string | null;
   isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
   brand?: Brand;
 }
 
@@ -55,6 +89,7 @@ export interface ProductAlias {
   id: string;
   productId: string;
   alias: string;
+  createdBy: string | null;
   createdAt: string;
 }
 
@@ -63,27 +98,22 @@ export type MessageType = 'text' | 'image' | 'document' | 'audio' | string;
 export interface WhatsappMessage {
   id: string;
   waMessageId: string;
-  senderPhone: string;
+  senderPhone: string | null;
   senderName: string | null;
   bodyRaw: string | null;
   bodyNormalized: string | null;
   messageType: MessageType;
   hasMedia: boolean;
-  reportType: 'merchandiser' | 'promoter' | 'unknown' | null;
-  status:
-    | 'received'
-    | 'processing'
-    | 'parsed'
-    | 'flagged'
-    | 'reviewed'
-    | 'rejected'
-    | 'duplicate'
-    | string;
+  reportType: ReportType | null;
+  status: MessageStatus | string;
   aiConfidence: number | null;
   aiClassification: Record<string, unknown> | null;
   aiExtraction: Record<string, unknown> | null;
   receivedAt: string;
   processedAt: string | null;
+  reviewedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ReportFlag {
@@ -91,11 +121,12 @@ export interface ReportFlag {
   reportId: string;
   flagCode: string;
   fieldName: string | null;
-  severity: 'error' | 'warning' | 'info';
-  message: string;
-  context?: string | null;
-  status: 'open' | 'resolved' | 'ignored';
+  severity: FlagSeverity;
+  message: string | null;
+  status: FlagStatus;
+  resolvedBy: string | null;
   resolvedAt: string | null;
+  createdAt: string;
 }
 
 export interface ParsedReport {
@@ -105,23 +136,18 @@ export interface ParsedReport {
   outletId: string | null;
   reportedBy: string | null;
   reportDate: string | null;
-  reportType: 'merchandiser' | 'promoter' | 'unknown';
-  status:
-    | 'draft'
-    | 'pending_review'
-    | 'approved'
-    | 'rejected'
-    | 'archived'
-    | string;
+  reportType: ReportType;
+  status: ParsedReportStatus | string;
   confidence: number | null;
   locationRaw: string | null;
   dateRaw: string | null;
   nameRaw: string | null;
   isDepotReport: boolean;
   createdAt: string;
+  updatedAt?: string;
   flags?: ReportFlag[];
-  brand?: Brand | { id: string; name: string; slug: string } | null;
-  outlet?: Outlet | { id: string; name: string; type: string; isDepot: boolean } | null;
+  brand?: Brand | null;
+  outlet?: Outlet | null;
   message?: {
     id: string;
     bodyRaw: string | null;
@@ -130,7 +156,7 @@ export interface ParsedReport {
     aiClassification: Record<string, unknown> | null;
     aiConfidence: number | null;
     messageType: string;
-    senderPhone: string;
+    senderPhone: string | null;
     senderName: string | null;
     receivedAt: string;
   } | null;
@@ -150,43 +176,60 @@ export interface ParsedReport {
   } | null;
 }
 
-export interface MerchandiserItem {
+export interface MerchandiserReportItemBatch {
   id: string;
-  productNameRaw: string | null;
+  reportItemId: string;
+  quantity: number | null;
+  expiryDate: string | null;
+  expiryRaw: string | null;
+  createdAt: string;
+}
+
+export interface MerchandiserReportItem {
+  id: string;
+  merchandiserReportId: string;
   productId: string | null;
+  productNameRaw: string;
   quantity: number | null;
   expiryDate: string | null;
   expiryRaw: string | null;
   isProductMatched: boolean;
   matchConfidence: number | null;
   matchType: string | null;
+  createdAt?: string;
   matchSuggestions: Array<{
     productId: string;
     canonicalName: string;
     confidence: number;
   }>;
+  batches?: MerchandiserReportItemBatch[];
   product?: Product | null;
 }
+
+export type MerchandiserItem = MerchandiserReportItem;
 
 export interface MerchandiserReport {
   id: string;
   reportId: string;
   promoType: string | null;
   notes: string | null;
+  createdAt?: string;
   items: MerchandiserItem[];
   parsedReport: ParsedReport;
 }
 
 export interface PromoterSaleItem {
   id: string;
-  productNameRaw: string | null;
+  promoterReportId?: string;
   productId: string | null;
+  productNameRaw: string;
   quantity: number | null;
   promoLabel: string | null;
   isOffer: boolean;
   isProductMatched: boolean;
   matchConfidence: number | null;
   matchType: string | null;
+  createdAt?: string;
   matchSuggestions: Array<{
     productId: string;
     canonicalName: string;
@@ -197,13 +240,15 @@ export interface PromoterSaleItem {
 
 export interface PromoterSampleItem {
   id: string;
-  productNameRaw: string | null;
+  promoterReportId?: string;
   productId: string | null;
+  productNameRaw: string;
   quantity: number | null;
   availabilityNote: string | null;
   isProductMatched: boolean;
   matchConfidence: number | null;
   matchType: string | null;
+  createdAt?: string;
   matchSuggestions: Array<{
     productId: string;
     canonicalName: string;
@@ -220,10 +265,36 @@ export interface PromoterReport {
   personsTasted: number | null;
   feedbackText: string | null;
   mostAskedQuestion: string | null;
-  questionsAnswers: { question: string; answer: string }[] | Record<string, unknown> | null;
+  questionsAnswers:
+    | { question: string; answer: string }[]
+    | Record<string, unknown>
+    | null;
   sales: PromoterSaleItem[];
   samples: PromoterSampleItem[];
   parsedReport: ParsedReport;
+}
+
+export interface AuditLog {
+  id: string;
+  userId: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  fieldName: string | null;
+  oldValue: string | null;
+  newValue: string | null;
+  createdAt: string;
+}
+
+export interface UnknownSender {
+  id: string;
+  senderPhone: string;
+  senderName: string | null;
+  seenCount: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  resolvedBrandId: string | null;
+  resolvedAt: string | null;
 }
 
 export interface PaginatedResponse<T> {
@@ -266,7 +337,7 @@ export interface ReportsByDay {
 
 export interface TopFlaggedProduct {
   product_name_raw: string;
-  count:            number;
+  count: number;
 }
 
 export interface MerchandiserDashboardParams {
@@ -369,6 +440,27 @@ export interface PromoterOutletReportDetail {
   status: string;
   promoter_id: string | null;
   promoter_name: string | null;
+  sales: Array<{
+    id: string;
+    product_id: string | null;
+    product_name_raw: string;
+    quantity: number | null;
+    promo_label: string | null;
+    is_offer: boolean;
+    is_product_matched: boolean;
+    match_confidence: number | null;
+    match_type: string | null;
+  }>;
+  samples: Array<{
+    id: string;
+    product_id: string | null;
+    product_name_raw: string;
+    quantity: number | null;
+    availability_note: string | null;
+    is_product_matched: boolean;
+    sample_match_confidence: number | null;
+    sample_match_type: string | null;
+  }>;
 }
 
 export interface PromoterOutletReportsResponse {
