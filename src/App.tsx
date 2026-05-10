@@ -66,6 +66,14 @@ function BrandManagerPlus({ children }: { children: ReactNode }) {
   return children;
 }
 
+function DashboardPromoterRoles({ children }: { children: ReactNode }) {
+  const ok = useAuthStore((s) =>
+    s.hasRole('super_admin', 'brand_manager', 'supervisor'),
+  );
+  if (!ok) return <Navigate to="/" replace />;
+  return children;
+}
+
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginGate /> },
   {
@@ -104,7 +112,11 @@ export const router = createBrowserRouter([
           },
           {
             path: 'dashboard/promoter',
-            element: <PromoterDashboard />,
+            element: (
+              <DashboardPromoterRoles>
+                <PromoterDashboard />
+              </DashboardPromoterRoles>
+            ),
           },
           {
             path: 'reports/merchandiser',

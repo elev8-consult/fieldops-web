@@ -1,6 +1,5 @@
 import { api } from '@/api/axios';
 import type {
-  PromoterDashboardFilterOptions,
   PromoterDashboardGridResponse,
   PromoterDashboardParams,
   PromoterDashboardSummaryResponse,
@@ -17,21 +16,14 @@ function normalizeParams(params: PromoterDashboardParams) {
 export const promoterDashboardApi = {
   getSummary: (params: PromoterDashboardParams) =>
     api
-      .get<PromoterDashboardSummaryResponse>('/promoter-dashboard/summary', {
+      .get<PromoterDashboardSummaryResponse>('/dashboard/promoter/summary', {
         params: normalizeParams(params),
       })
       .then((response) => response.data),
 
   getGrid: (params: PromoterDashboardParams) =>
     api
-      .get<PromoterDashboardGridResponse>('/promoter-dashboard/grid', {
-        params: normalizeParams(params),
-      })
-      .then((response) => response.data),
-
-  getFilters: (params: PromoterDashboardParams) =>
-    api
-      .get<PromoterDashboardFilterOptions>('/promoter-dashboard/filters', {
+      .get<PromoterDashboardGridResponse>('/dashboard/promoter/grid', {
         params: normalizeParams(params),
       })
       .then((response) => response.data),
@@ -39,7 +31,7 @@ export const promoterDashboardApi = {
   getOutletReports: (outletId: string, params: PromoterDashboardParams) =>
     api
       .get<PromoterOutletReportsResponse>(
-        `/promoter-dashboard/outlet/${outletId}/reports`,
+        `/dashboard/promoter/outlet/${outletId}/reports`,
         { params: normalizeParams(params) },
       )
       .then((response) => response.data),

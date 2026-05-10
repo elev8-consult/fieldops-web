@@ -77,7 +77,6 @@ export interface WhatsappMessage {
     | 'flagged'
     | 'reviewed'
     | 'rejected'
-    | 'failed'
     | 'duplicate'
     | string;
   aiConfidence: number | null;
@@ -95,7 +94,7 @@ export interface ReportFlag {
   severity: 'error' | 'warning' | 'info';
   message: string;
   context?: string | null;
-  status: 'open' | 'resolved' | 'dismissed';
+  status: 'open' | 'resolved' | 'ignored';
   resolvedAt: string | null;
 }
 
@@ -109,10 +108,10 @@ export interface ParsedReport {
   reportType: 'merchandiser' | 'promoter' | 'unknown';
   status:
     | 'draft'
-    | 'flagged'
     | 'pending_review'
     | 'approved'
     | 'rejected'
+    | 'archived'
     | string;
   confidence: number | null;
   locationRaw: string | null;
@@ -321,7 +320,7 @@ export interface PromoterDashboardParams {
   brand_id?: string;
   date_from?: string;
   date_to?: string;
-  status?: Array<'draft' | 'pending_review' | 'approved' | 'rejected' | 'reviewed'>;
+  status?: Array<'draft' | 'pending_review' | 'approved' | 'rejected' | 'archived'>;
   outlet_id?: string;
   reported_by?: string;
 }
@@ -336,6 +335,7 @@ export interface PromoterDashboardRow {
   outlet_id: string;
   outlet_name: string;
   outlet_type: string;
+  region_name: string | null;
   has_flags: boolean;
   flag_messages: string[];
   pending_review: boolean;
@@ -358,45 +358,17 @@ export interface PromoterDashboardGridResponse {
 
 export interface PromoterDashboardSummaryResponse {
   outlets_visited: number;
-  units_sold: number;
-  samples_given: number;
-  persons_contacted: number;
-  persons_tasted: number;
-}
-
-export interface PromoterDashboardFilterOptions {
-  statuses: Array<'draft' | 'pending_review' | 'approved' | 'rejected' | 'reviewed'>;
-  outlets: Array<{ id: string; name: string }>;
-  promoters: Array<{ id: string; full_name: string }>;
+  reports_count: number;
+  qty_sold: number;
+  qty_gifts: number;
 }
 
 export interface PromoterOutletReportDetail {
   report_id: string;
   report_date: string;
   status: string;
-  promoter: { id: string | null; full_name: string | null };
-  persons_contacted: number;
-  persons_tasted: number;
-  feedback_text: string | null;
-  most_asked_question: string | null;
-  sales: Array<{
-    id: string;
-    product_name: string | null;
-    quantity: number;
-    is_offer: boolean;
-    promo_label: string | null;
-  }>;
-  samples: Array<{
-    id: string;
-    product_name: string | null;
-    quantity: number;
-  }>;
-  flags: Array<{
-    id: string;
-    severity: string;
-    status: string;
-    message: string;
-  }>;
+  promoter_id: string | null;
+  promoter_name: string | null;
 }
 
 export interface PromoterOutletReportsResponse {
@@ -404,7 +376,7 @@ export interface PromoterOutletReportsResponse {
     id: string;
     name: string;
     type: string;
-    region: string | null;
+    region_name: string | null;
   };
   reports: PromoterOutletReportDetail[];
 }

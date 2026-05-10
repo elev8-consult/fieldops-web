@@ -20,15 +20,6 @@ export function usePromoterDashboardSummary(params: PromoterDashboardParams) {
   });
 }
 
-export function usePromoterDashboardFilters(params: PromoterDashboardParams) {
-  return useQuery({
-    queryKey: ['promoter-dashboard-filters', params.brand_id, params.date_from, params.date_to],
-    queryFn: () => promoterDashboardApi.getFilters(params),
-    enabled: Boolean(params.brand_id),
-    staleTime: 60_000,
-  });
-}
-
 export function usePromoterOutletReports(
   outletId: string | null,
   params: PromoterDashboardParams,

@@ -5,9 +5,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMerchandiserDashboard } from '@/hooks/useMerchandiserDashboard';
 import { ROLES } from '@/lib/constants';
 import { getAxiosMessage } from '@/lib/utils';
-import { DashboardFilters } from '@/pages/dashboard/components/DashboardFilters';
+import { MerchandiserDashboardFilters } from '@/pages/dashboard/components/MerchandiserDashboardFilters';
 import { DashboardSummaryCards } from '@/pages/dashboard/components/DashboardSummaryCards';
-import { ExportButton } from '@/pages/dashboard/components/ExportButton';
+import { MerchandiserExportButton } from '@/pages/dashboard/components/MerchandiserExportButton';
 import { PivotTable } from '@/pages/dashboard/components/PivotTable';
 import type { MerchandiserDashboardParams } from '@/types';
 import { useQuery } from '@tanstack/react-query';
@@ -117,13 +117,13 @@ export function MerchandiserDashboard() {
             Excel-style outlet x product stock view from live reports.
           </p>
         </div>
-        <ExportButton
+        <MerchandiserExportButton
           params={appliedFilters}
           disabled={noBrandSelected || hasNoRows || dashboardQ.isLoading}
         />
       </div>
 
-      <DashboardFilters
+      <MerchandiserDashboardFilters
         brands={brands}
         filters={draftFilters}
         isBrandManager={isBrandManager}
