@@ -2,9 +2,14 @@ import axios from 'axios';
 
 const TOKEN_KEY = 'fieldops_token';
 const USER_KEY  = 'fieldops_user';
+const rawApiUrl = import.meta.env.VITE_API_URL;
+const normalizedApiUrl =
+  typeof rawApiUrl === 'string' && rawApiUrl.trim().length > 0
+    ? rawApiUrl.replace(/\/+$/, '')
+    : '';
 
 const api = axios.create({
-  baseURL:         import.meta.env.VITE_API_URL + '/api',
+  baseURL:         `${normalizedApiUrl}/api`,
   timeout:         30000,
   withCredentials: true,
   headers: {

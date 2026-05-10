@@ -132,7 +132,7 @@ export function Products() {
       closeModal();
       await qc.invalidateQueries({ queryKey: ['products'] });
     },
-    onError: (e: Error) => addToast('error', e.message || 'Create failed'),
+    onError: (e: unknown) => addToast('error', getAxiosMessage(e) || 'Create failed'),
   });
 
   const updateM = useMutation({
@@ -148,7 +148,7 @@ export function Products() {
       closeModal();
       await qc.invalidateQueries({ queryKey: ['products'] });
     },
-    onError: (e: Error) => addToast('error', e.message || 'Update failed'),
+    onError: (e: unknown) => addToast('error', getAxiosMessage(e) || 'Update failed'),
   });
 
   const deleteM = useMutation({
@@ -158,7 +158,7 @@ export function Products() {
       setDeleteId(null);
       await qc.invalidateQueries({ queryKey: ['products'] });
     },
-    onError: (e: Error) => addToast('error', e.message || 'Delete failed'),
+    onError: (e: unknown) => addToast('error', getAxiosMessage(e) || 'Delete failed'),
   });
 
   const addAliasM = useMutation({
@@ -171,7 +171,8 @@ export function Products() {
         queryKey: ['products', expandedId, 'aliases'],
       });
     },
-    onError: (e: Error) => addToast('error', e.message || 'Failed to add alias'),
+    onError: (e: unknown) =>
+      addToast('error', getAxiosMessage(e) || 'Failed to add alias'),
   });
 
   const delAliasM = useMutation({
@@ -183,8 +184,8 @@ export function Products() {
         queryKey: ['products', expandedId, 'aliases'],
       });
     },
-    onError: (e: Error) =>
-      addToast('error', e.message || 'Failed to remove alias'),
+    onError: (e: unknown) =>
+      addToast('error', getAxiosMessage(e) || 'Failed to remove alias'),
   });
 
   function closeModal() {
