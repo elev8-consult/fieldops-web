@@ -1,4 +1,5 @@
 import axios from 'axios';
+import qs from 'qs';
 
 const TOKEN_KEY = 'fieldops_token';
 const USER_KEY  = 'fieldops_user';
@@ -12,6 +13,7 @@ const api = axios.create({
   baseURL:         `${normalizedApiUrl}/api`,
   timeout:         30000,
   withCredentials: true,
+  paramsSerializer: (params) => qs.stringify(params, { arrayFormat: 'repeat' }),
   headers: {
     'Content-Type': 'application/json',
     'Accept':       'application/json',
