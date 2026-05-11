@@ -20,7 +20,7 @@ export const dashboardApi = {
     link.href = url;
     link.setAttribute(
       'download',
-      `merchandiser-report-${params.brandId}-${Date.now()}.xlsx`,
+      `merchandiser-report-${params.brand_id ?? 'all'}-${Date.now()}.xlsx`,
     );
     document.body.appendChild(link);
     link.click();

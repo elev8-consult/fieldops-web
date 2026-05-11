@@ -17,8 +17,8 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const defaultDateRange = () => ({
-  dateFrom: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
-  dateTo: format(new Date(), 'yyyy-MM-dd'),
+  date_from: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+  date_to: format(new Date(), 'yyyy-MM-dd'),
 });
 
 export function MerchandiserDashboard() {
@@ -29,9 +29,9 @@ export function MerchandiserDashboard() {
 
   const initialFilters: MerchandiserDashboardParams = useMemo(
     () => ({
-      brandId: managerBrandId,
+      brand_id: managerBrandId || undefined,
       ...defaultDateRange(),
-      status: 'approved',
+      status: ['approved', 'pending_review'],
     }),
     [managerBrandId],
   );
@@ -49,9 +49,12 @@ export function MerchandiserDashboard() {
 
   const dashboardQ = useMerchandiserDashboard(appliedFilters);
   const dashboardData = dashboardQ.data;
+  const lastUpdated = dashboardQ.dataUpdatedAt
+    ? new Date(dashboardQ.dataUpdatedAt)
+    : null;
 
   const brands = brandsQ.data ?? [];
-  const noBrandSelected = !appliedFilters.brandId;
+  const noBrandSelected = !appliedFilters.brand_id;
   const hasNoRows = dashboardData != null && dashboardData.rows.length === 0;
   let content: ReactNode = null;
 
@@ -100,6 +103,31 @@ export function MerchandiserDashboard() {
   } else if (dashboardData) {
     content = (
       <>
+        <div className="flex items-center justify-between px-1 pb-2 text-xs text-gray-400">
+          <div className="flex items-center gap-1.5">
+            {dashboardQ.isFetching ? (
+              <>
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                <span>Updating…</span>
+              </>
+            ) : (
+              <>
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400" />
+                <span>Live</span>
+              </>
+            )}
+          </div>
+          {lastUpdated && (
+            <span>
+              Last updated:{' '}
+              {lastUpdated.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              })}
+            </span>
+          )}
+        </div>
         <DashboardSummaryCards summary={dashboardData.summary} />
         <PivotTable data={dashboardData} />
       </>
@@ -131,9 +159,9 @@ export function MerchandiserDashboard() {
         onApply={() => setAppliedFilters(draftFilters)}
         onReset={() => {
           const resetFilters = {
-            brandId: managerBrandId,
+            brand_id: managerBrandId || undefined,
             ...defaultDateRange(),
-            status: 'approved' as const,
+            status: ['approved', 'pending_review'],
           };
           setDraftFilters(resetFilters);
           setAppliedFilters(resetFilters);

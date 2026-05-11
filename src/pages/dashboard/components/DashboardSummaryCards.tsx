@@ -2,11 +2,11 @@ import { format } from 'date-fns';
 
 interface DashboardSummaryCardsProps {
   summary: {
-    totalReports: number;
-    totalOutlets: number;
-    totalProducts: number;
-    flaggedCount: number;
-    lastReportDate: string | null;
+    outlets_visited: number;
+    total_items_counted: number;
+    unmatched_products: number;
+    reports_pending_review: number;
+    last_report_at: string | null;
   };
 }
 
@@ -17,11 +17,11 @@ function formatLebaneseDate(date: string | null) {
 
 export function DashboardSummaryCards({ summary }: DashboardSummaryCardsProps) {
   const cards = [
-    { label: 'Total Reports', value: summary.totalReports },
-    { label: 'Total Outlets', value: summary.totalOutlets },
-    { label: 'Total Products', value: summary.totalProducts },
-    { label: 'Flagged Reports', value: summary.flaggedCount },
-    { label: 'Last Report Date', value: formatLebaneseDate(summary.lastReportDate) },
+    { label: 'Outlets Visited', value: summary.outlets_visited },
+    { label: 'Total Items Counted', value: summary.total_items_counted },
+    { label: 'Unmatched Products', value: summary.unmatched_products },
+    { label: 'Pending Review Reports', value: summary.reports_pending_review },
+    { label: 'Last Report Date', value: formatLebaneseDate(summary.last_report_at) },
   ];
 
   return (

@@ -1,5 +1,5 @@
 interface PivotTableHeaderProps {
-  products: Array<{ id: string; name: string }>;
+  products: Array<{ id: string; canonical_name: string }>;
 }
 
 export function PivotTableHeader({ products }: PivotTableHeaderProps) {
@@ -14,7 +14,7 @@ export function PivotTableHeader({ products }: PivotTableHeaderProps) {
             key={product.id}
             className="sticky top-0 z-30 min-w-36 border-b border-r border-slate-200 bg-slate-100 px-2 py-3 text-center text-xs font-semibold text-slate-700"
           >
-            {product.name}
+            {product.canonical_name}
           </th>
         ))}
       </tr>

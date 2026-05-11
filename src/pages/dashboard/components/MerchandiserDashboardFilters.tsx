@@ -25,8 +25,8 @@ export function MerchandiserDashboardFilters({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
         <Select
           label="Brand"
-          value={filters.brandId}
-          onValueChange={(brandId) => onFiltersChange({ ...filters, brandId })}
+          value={filters.brand_id ?? ''}
+          onValueChange={(brand_id) => onFiltersChange({ ...filters, brand_id })}
           disabled={isBrandManager}
         >
           <option value="">Select brand</option>
@@ -40,32 +40,32 @@ export function MerchandiserDashboardFilters({
         <Input
           label="Date From"
           type="date"
-          value={filters.dateFrom ?? ''}
+          value={filters.date_from ?? ''}
           onChange={(e) =>
-            onFiltersChange({ ...filters, dateFrom: e.target.value })
+            onFiltersChange({ ...filters, date_from: e.target.value })
           }
         />
 
         <Input
           label="Date To"
           type="date"
-          value={filters.dateTo ?? ''}
-          onChange={(e) => onFiltersChange({ ...filters, dateTo: e.target.value })}
+          value={filters.date_to ?? ''}
+          onChange={(e) => onFiltersChange({ ...filters, date_to: e.target.value })}
         />
 
         <Select
           label="Status"
-          value={filters.status ?? 'approved'}
+          value={filters.status?.[0] ?? 'approved'}
           onValueChange={(status) =>
             onFiltersChange({
               ...filters,
-              status: status as MerchandiserDashboardParams['status'],
+              status: [status],
             })
           }
         >
           <option value="approved">Approved</option>
-          <option value="flagged">Flagged</option>
-          <option value="all">All</option>
+          <option value="pending_review">Pending review</option>
+          <option value="rejected">Rejected</option>
         </Select>
 
         <div className="flex items-end gap-2">

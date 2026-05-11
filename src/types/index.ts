@@ -341,50 +341,58 @@ export interface TopFlaggedProduct {
 }
 
 export interface MerchandiserDashboardParams {
-  brandId: string;
-  dateFrom?: string;
-  dateTo?: string;
-  status?: 'approved' | 'flagged' | 'all';
-}
-
-export interface MerchandiserDashboardBatch {
-  quantity: number | null;
-  expiryDate: string | null;
-  expiryRaw: string | null;
+  brand_id?: string;
+  date_from?: string;
+  date_to?: string;
+  status?: string[];
+  outlet_id?: string;
+  reported_by?: string;
 }
 
 export interface MerchandiserDashboardCell {
   quantity: number | null;
-  reportDate: string;
-  reportId: string;
-  expiryDate: string | null;
-  expiryRaw: string | null;
-  hasMultipleBatches: boolean;
-  batches: MerchandiserDashboardBatch[];
-  status: 'approved' | 'flagged';
+  expiry_date: string | null;
+  expiry_raw: string | null;
+  report_date: string;
+  match_type: string | null;
+  match_confidence: number | null;
+  has_batches: boolean;
 }
 
 export interface MerchandiserDashboardRow {
-  outletId: string;
-  outletName: string;
-  isDepot: boolean;
+  outlet_id: string;
+  outlet_name: string;
+  outlet_type: string;
+  region_name: string | null;
+  is_depot: boolean;
+  last_report_date: string | null;
+  has_flags: boolean;
+  pending_review: boolean;
   cells: Record<string, MerchandiserDashboardCell>;
+  row_total: number;
+}
+
+export interface MerchandiserDashboardSummary {
+  outlets_visited: number;
+  total_items_counted: number;
+  unmatched_products: number;
+  reports_pending_review: number;
+  last_report_at: string | null;
+}
+
+export interface MerchandiserDashboardProduct {
+  id: string;
+  canonical_name: string;
+  sku: string | null;
+  sort_order: number;
 }
 
 export interface MerchandiserDashboardResponse {
-  brand: { id: string; name: string; slug: string };
-  dateRange: { from: string; to: string };
-  products: Array<{ id: string; name: string }>;
-  outlets: Array<{ id: string; name: string; isDepot: boolean }>;
+  summary: MerchandiserDashboardSummary;
+  products: MerchandiserDashboardProduct[];
   rows: MerchandiserDashboardRow[];
-  summary: {
-    totalReports: number;
-    totalOutlets: number;
-    totalProducts: number;
-    approvedCount: number;
-    flaggedCount: number;
-    lastReportDate: string | null;
-  };
+  column_totals: Record<string, number>;
+  generated_at: string;
 }
 
 export interface PromoterDashboardParams {

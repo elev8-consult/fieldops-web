@@ -14,7 +14,7 @@ export function PivotTable({ data }: PivotTableProps) {
           <PivotTableHeader products={data.products} />
           <tbody>
             {data.rows.map((row) => (
-              <PivotTableRow key={row.outletId} row={row} products={data.products} />
+              <PivotTableRow key={row.outlet_id} row={row} products={data.products} />
             ))}
           </tbody>
         </table>

@@ -21,7 +21,7 @@ export function MerchandiserExportButton({
     <Button
       variant="secondary"
       loading={loading}
-      disabled={disabled || !params.brandId}
+      disabled={disabled || !params.brand_id}
       leftIcon={<Download className="h-4 w-4" />}
       onClick={async () => {
         try {
