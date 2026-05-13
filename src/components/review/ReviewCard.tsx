@@ -103,6 +103,25 @@ export function ReviewCard({
               />
             )}
             {pills}
+            {(() => {
+              const brandFlag = report.flags?.find((f) =>
+                ['MISSING_BRAND', 'BRAND_NOT_MATCHED', 'BRAND_LOW_CONFIDENCE'].includes(
+                  f.flagCode,
+                ),
+              );
+              if (!brandFlag) return null;
+              return (
+                <span
+                  className={`text-xs font-medium ${
+                    brandFlag.flagCode === 'BRAND_LOW_CONFIDENCE'
+                      ? 'text-amber-500'
+                      : 'text-red-500'
+                  }`}
+                >
+                  ⚠ {brandFlag.message}
+                </span>
+              );
+            })()}
             {openFlags.length > 3 && (
               <span className="text-xs text-slate-500">
                 +{openFlags.length - 3} more
