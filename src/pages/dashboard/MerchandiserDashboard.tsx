@@ -25,6 +25,7 @@ export function MerchandiserDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isBrandManager = user?.role === ROLES.BRAND_MANAGER;
+  const canEdit = user?.role === ROLES.SUPER_ADMIN;
   const managerBrandId = isBrandManager ? (user?.brandId ?? '') : '';
 
   const initialFilters: MerchandiserDashboardParams = useMemo(
@@ -128,7 +129,7 @@ export function MerchandiserDashboard() {
           )}
         </div>
         <DashboardSummaryCards summary={dashboardData.summary} />
-        <PivotTable data={dashboardData} />
+        <PivotTable data={dashboardData} canEdit={Boolean(canEdit)} />
       </>
     );
   }

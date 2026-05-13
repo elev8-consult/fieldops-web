@@ -349,6 +349,7 @@ export interface MerchandiserDashboardParams {
 }
 
 export interface MerchandiserDashboardCell {
+  item_id: string | null;
   quantity: number | null;
   expiry_date: string | null;
   expiry_raw: string | null;

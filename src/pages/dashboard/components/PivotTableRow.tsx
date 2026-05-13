@@ -1,14 +1,15 @@
 import { cn } from '@/lib/utils';
 import type { MerchandiserDashboardRow } from '@/types';
 import { Warehouse } from 'lucide-react';
-import { PivotCell } from './PivotCell';
+import { PivotTableCell } from './PivotTableCell';
 
 interface PivotTableRowProps {
   row: MerchandiserDashboardRow;
   products: Array<{ id: string; canonical_name: string }>;
+  canEdit: boolean;
 }
 
-export function PivotTableRow({ row, products }: PivotTableRowProps) {
+export function PivotTableRow({ row, products, canEdit }: PivotTableRowProps) {
   return (
     <tr className={cn(row.is_depot && 'bg-slate-50')}>
       <td
@@ -36,16 +37,11 @@ export function PivotTableRow({ row, products }: PivotTableRowProps) {
         </div>
       </td>
       {products.map((product) => (
-        <td
+        <PivotTableCell
           key={`${row.outlet_id}-${product.id}`}
-          className="min-w-36 border-b border-r border-slate-100 px-2 py-1 align-top"
-        >
-          <PivotCell
-            cell={row.cells[product.id]}
-            productName={product.canonical_name}
-            outletName={row.outlet_name}
-          />
-        </td>
+          cell={row.cells[product.id]}
+          canEdit={canEdit}
+        />
       ))}
     </tr>
   );

@@ -4,9 +4,10 @@ import { PivotTableRow } from './PivotTableRow';
 
 interface PivotTableProps {
   data: MerchandiserDashboardResponse;
+  canEdit: boolean;
 }
 
-export function PivotTable({ data }: PivotTableProps) {
+export function PivotTable({ data, canEdit }: PivotTableProps) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="max-h-[70vh] overflow-auto">
@@ -14,7 +15,12 @@ export function PivotTable({ data }: PivotTableProps) {
           <PivotTableHeader products={data.products} />
           <tbody>
             {data.rows.map((row) => (
-              <PivotTableRow key={row.outlet_id} row={row} products={data.products} />
+              <PivotTableRow
+                key={row.outlet_id}
+                row={row}
+                products={data.products}
+                canEdit={canEdit}
+              />
             ))}
           </tbody>
         </table>

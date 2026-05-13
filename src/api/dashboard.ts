@@ -27,4 +27,9 @@ export const dashboardApi = {
     link.remove();
     window.URL.revokeObjectURL(url);
   },
+
+  updateItemQuantity: (itemId: string, quantity: number) =>
+    api
+      .patch(`/reports/merchandiser/items/${itemId}`, { quantity })
+      .then((r) => r.data),
 };
