@@ -344,7 +344,6 @@ export interface MerchandiserDashboardParams {
   brand_id?: string;
   date_from?: string;
   date_to?: string;
-  status?: string[];
   outlet_id?: string;
   reported_by?: string;
 }

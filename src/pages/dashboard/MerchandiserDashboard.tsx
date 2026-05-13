@@ -31,7 +31,6 @@ export function MerchandiserDashboard() {
     () => ({
       brand_id: managerBrandId || undefined,
       ...defaultDateRange(),
-      status: ['approved', 'pending_review'],
     }),
     [managerBrandId],
   );
@@ -90,10 +89,10 @@ export function MerchandiserDashboard() {
       <div className="rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center">
         <PackageSearch className="mx-auto h-12 w-12 text-slate-300" />
         <h2 className="mt-3 text-lg font-semibold text-slate-900">
-          No approved reports found for this brand in the selected date range.
+          No matched reports found for this brand in the selected date range.
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Try adjusting the filters or check if reports are pending review.
+          Try adjusting the filters or wait for newly processed reports to appear.
         </p>
         <Button className="mt-4" onClick={() => navigate('/review')}>
           Go to Review Queue
@@ -161,7 +160,6 @@ export function MerchandiserDashboard() {
           const resetFilters = {
             brand_id: managerBrandId || undefined,
             ...defaultDateRange(),
-            status: ['approved', 'pending_review'],
           };
           setDraftFilters(resetFilters);
           setAppliedFilters(resetFilters);

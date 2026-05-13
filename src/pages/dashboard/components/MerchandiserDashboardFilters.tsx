@@ -22,7 +22,7 @@ export function MerchandiserDashboardFilters({
 }: MerchandiserDashboardFiltersProps) {
   return (
     <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Select
           label="Brand"
           value={filters.brand_id ?? ''}
@@ -52,21 +52,6 @@ export function MerchandiserDashboardFilters({
           value={filters.date_to ?? ''}
           onChange={(e) => onFiltersChange({ ...filters, date_to: e.target.value })}
         />
-
-        <Select
-          label="Status"
-          value={filters.status?.[0] ?? 'approved'}
-          onValueChange={(status) =>
-            onFiltersChange({
-              ...filters,
-              status: [status],
-            })
-          }
-        >
-          <option value="approved">Approved</option>
-          <option value="pending_review">Pending review</option>
-          <option value="rejected">Rejected</option>
-        </Select>
 
         <div className="flex items-end gap-2">
           <Button className="w-full" onClick={onApply}>
