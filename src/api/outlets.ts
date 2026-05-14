@@ -23,9 +23,10 @@ export async function fetchOutlet(id: string): Promise<Outlet> {
 export async function createOutlet(body: {
   name: string;
   type: Outlet['type'];
-  isDepot?: boolean;
-  regionId: string;
-  address?: string | null;
+  is_depot?: boolean;
+  region_id?: string;
+  address?: string;
+  is_active?: boolean;
 }): Promise<Outlet> {
   const { data } = await api.post<Record<string, unknown>>('/outlets', body);
   return normalizeOutlet(data);
@@ -36,10 +37,10 @@ export async function updateOutlet(
   body: Partial<{
     name: string;
     type: Outlet['type'];
-    isDepot: boolean;
-    regionId: string;
-    address: string | null;
-    isActive: boolean;
+    is_depot: boolean;
+    region_id: string;
+    address: string;
+    is_active: boolean;
   }>,
 ): Promise<Outlet> {
   const { data } = await api.patch<Record<string, unknown>>(

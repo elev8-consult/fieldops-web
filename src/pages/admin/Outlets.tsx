@@ -38,7 +38,7 @@ const schema = z.object({
   type: z.enum(outletTypes),
   isDepot: z.boolean(),
   isActive: z.boolean(),
-  regionId: z.string().min(1, 'Region required'),
+  regionId: z.string().optional(),
   address: z.string().optional(),
 });
 
@@ -243,19 +243,17 @@ export function Outlets() {
 
   const onSubmit = form.handleSubmit((vals) => {
     const base = {
-      name: vals.name,
-      type: vals.type,
-      isDepot: vals.isDepot,
-      regionId: vals.regionId,
-      address: vals.address || null,
+      name: vals.name?.trim(),
+      type: vals.type || 'supermarket',
+      is_depot: Boolean(vals.type === 'depot' ? true : vals.isDepot ?? false),
+      region_id: vals.regionId || undefined,
+      address: vals.address?.trim() || undefined,
+      is_active: vals.isActive ?? true,
     };
     if (editing) {
       updateM.mutate({
         id: editing.id,
-        body: {
-          ...base,
-          isActive: vals.isActive,
-        },
+        body: base,
       });
     } else {
       createM.mutate(base);
@@ -315,8 +313,8 @@ export function Outlets() {
 
       {regions.length === 0 && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          No regions found on existing outlets. Enter a numeric region ID when
-          creating an outlet (must exist in the database).
+          No regions found on existing outlets. Enter a valid region UUID if
+          needed (leave blank if unknown).
         </p>
       )}
 
@@ -414,7 +412,7 @@ export function Outlets() {
             <Input
               label="Region ID"
               {...form.register('regionId')}
-              placeholder="Numeric ID"
+              placeholder="Region UUID"
               error={form.formState.errors.regionId?.message}
             />
           )}
