@@ -1,54 +1,72 @@
 import { api } from '@/api/axios';
 
-export interface PromoterDashboardParams {
-  brand_id: string;
-  date_from?: string;
-  date_to?: string;
+export interface PromoterDashboardProduct {
+  key: string;
+  label: string;
+  product_id: string | null;
+  unmatched: boolean;
+  is_offer: boolean;
+  is_gift: boolean;
 }
 
-export interface PromoterFeedbackEntry {
-  outlet_name: string;
-  date: string;
-  reporter_name: string;
-  text: string;
+export interface PromoterDashboardCell {
+  quantity: number;
+  status: string;
+  parsed_report_id: string;
+  item_id?: string | null;
 }
 
 export interface PromoterDashboardResponse {
   brand: { id: string; name: string };
-  date_range: { from: string; to: string };
-  products: string[];
+  date_range: { from: string | null; to: string | null };
   dates: string[];
+  products: PromoterDashboardProduct[];
   rows: Array<{
     outlet_id: string;
     outlet_name: string;
-    days: Record<string, Record<string, number | null>>;
+    days: Record<string, Record<string, PromoterDashboardCell | number>>;
   }>;
   totals: Record<string, Record<string, number>>;
-  feedback: PromoterFeedbackEntry[];
+  feedback: Array<{
+    outlet_name: string;
+    outlet_id: string;
+    date: string;
+    reporter_name: string | null;
+    text: string;
+  }>;
 }
 
-export const promoterDashboardApi = {
-  getPromoterDashboard: (params: PromoterDashboardParams) =>
-    api
-      .get<PromoterDashboardResponse>('/dashboard/promoter', { params })
-      .then((r) => r.data),
+export async function getPromoterDashboard(params: {
+  brand_id: string;
+  date_from?: string;
+  date_to?: string;
+}): Promise<PromoterDashboardResponse> {
+  const { data } = await api.get<PromoterDashboardResponse>('/dashboard/promoter', {
+    params,
+  });
+  return data;
+}
 
-  exportPromoterDashboard: async (params: PromoterDashboardParams) => {
-    const response = await api.get('/dashboard/promoter/export', {
-      params,
-      responseType: 'blob',
-    });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute(
-      'download',
-      `promoter-report-${params.brand_id ?? 'all'}-${Date.now()}.xlsx`,
-    );
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  },
-};
+export async function exportPromoterDashboard(params: {
+  brand_id: string;
+  date_from?: string;
+  date_to?: string;
+}): Promise<void> {
+  const response = await api.get('/dashboard/promoter/export', {
+    params,
+    responseType: 'blob',
+  });
+  const header = response.headers['content-disposition'] as string | undefined;
+  const filenameMatch = header?.match(/filename="?([^"]+)"?/i);
+  const filename = filenameMatch?.[1] ?? 'promoter-dashboard.xlsx';
+
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
 

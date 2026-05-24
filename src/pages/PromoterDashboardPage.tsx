@@ -1,217 +1,177 @@
+import { api } from '@/api/axios';
 import { fetchBrands } from '@/api/brands';
 import {
-  promoterDashboardApi,
-  type PromoterDashboardParams,
+  exportPromoterDashboard,
+  getPromoterDashboard,
+  type PromoterDashboardCell,
+  type PromoterDashboardProduct,
 } from '@/api/promoterDashboardApi';
+import { fetchProducts } from '@/api/products';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { useAuth } from '@/hooks/useAuth';
-import { ROLES } from '@/lib/constants';
 import { getAxiosMessage } from '@/lib/utils';
 import { useUiStore } from '@/store/ui.store';
-import { useQuery } from '@tanstack/react-query';
-import {
-  getCoreRowModel,
-  useReactTable,
-  type ColumnDef,
-} from '@tanstack/react-table';
-import { format, subDays } from 'date-fns';
-import { AlertTriangle, Download, MessageSquareText, PackageSearch } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { getCoreRowModel, useReactTable } from '@tanstack/react-table';
+import { format } from 'date-fns';
+import { AlertTriangle, ChevronDown, ChevronUp, Download, Search, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
-const POLL_INTERVAL = 30_000;
+type DashboardParams = { brand_id: string; date_from?: string; date_to?: string };
 
-const PRODUCT_ORDER = [
-  'Shampoo ultimate repair',
-  'Conditioner ultimate repair',
-  'Mask ultimate repair',
-  'Serum ultimate repair',
-  'Shampoo oil nutritive',
-  'Conditioner oil nutritive',
-  'Mask oil nutritive',
-  'Serum oil nutritive',
-  'Shampoo aqua revive',
-  'Conditioner aqua revive',
-  'Mask aqua revive',
-  'Shampoo total repair',
-  'Conditioner total repair',
-  'Mask total repair',
-  'Shampoo split hair miracle',
-  'Conditioner split hair miracle',
-  'Shampoo supreme length',
-  'Offer 20% total repair',
-  'Offer 20% ultimate repair',
-  'Offer 20% oil nutritive',
-  'Offer 20% split hair miracle',
-  'Offer 20% aqua revive',
-  'Palette',
-  'Gifts',
-] as const;
-
-const OFFER_COLUMNS = new Set([
-  'Offer 20% total repair',
-  'Offer 20% ultimate repair',
-  'Offer 20% oil nutritive',
-  'Offer 20% split hair miracle',
-  'Offer 20% aqua revive',
-]);
-
-const defaultDateRange = () => ({
-  date_from: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
-  date_to: format(new Date(), 'yyyy-MM-dd'),
-});
-
-type PivotRow = {
-  outlet_id: string;
-  outlet_name: string;
-  feedback_text: string;
-  values: Record<string, number | null>;
+const statusDotClass: Record<string, string> = {
+  draft: 'bg-slate-400',
+  pending_review: 'bg-amber-400',
+  approved: 'bg-emerald-500',
+  rejected: 'bg-rose-500',
 };
 
-const metricKey = (date: string, metric: string) => `${date}__${metric}`;
-
-function renderPivotValue(value: number | null | undefined) {
-  if (value == null || value === 0) return '';
-  return value;
+function formatDate(value: string) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return format(d, 'dd/MM/yyyy');
 }
 
 export function PromoterDashboardPage() {
-  const { user } = useAuth();
   const addToast = useUiStore((s) => s.addToast);
-  const isBrandManager = user?.role === ROLES.BRAND_MANAGER;
-  const managerBrandId = isBrandManager ? (user?.brandId ?? '') : '';
+  const [brandId, setBrandId] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(true);
+  const [feedbackSearch, setFeedbackSearch] = useState('');
 
-  const initialFilters: PromoterDashboardParams = useMemo(
+  const [editingProduct, setEditingProduct] = useState<PromoterDashboardProduct | null>(
+    null,
+  );
+  const [productSearch, setProductSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearch(productSearch), 300);
+    return () => window.clearTimeout(t);
+  }, [productSearch]);
+
+  const params: DashboardParams = useMemo(
     () => ({
-      brand_id: managerBrandId || '',
-      ...defaultDateRange(),
+      brand_id: brandId,
+      date_from: dateFrom || undefined,
+      date_to: dateTo || undefined,
     }),
-    [managerBrandId],
+    [brandId, dateFrom, dateTo],
   );
 
-  const [draftFilters, setDraftFilters] =
-    useState<PromoterDashboardParams>(initialFilters);
-  const [appliedFilters, setAppliedFilters] =
-    useState<PromoterDashboardParams>(initialFilters);
-  const [feedbackSearch, setFeedbackSearch] = useState('');
-  const [exporting, setExporting] = useState(false);
-
   const brandsQ = useQuery({
-    queryKey: ['brands', 'promoter-dashboard-filters'],
+    queryKey: ['brands', 'promoter-dashboard'],
     queryFn: fetchBrands,
     staleTime: 60_000,
   });
 
   const dashboardQ = useQuery({
-    queryKey: ['promoter-dashboard-pivot', appliedFilters],
-    queryFn: () =>
-      promoterDashboardApi.getPromoterDashboard({
-        brand_id: appliedFilters.brand_id,
-        date_from: appliedFilters.date_from,
-        date_to: appliedFilters.date_to,
-      }),
-    enabled: Boolean(appliedFilters.brand_id),
-    refetchInterval: POLL_INTERVAL,
-    refetchIntervalInBackground: false,
-    staleTime: 0,
+    queryKey: ['promoter-dashboard', params],
+    queryFn: () => getPromoterDashboard(params),
+    refetchInterval: 30000,
+    enabled: !!brandId,
   });
 
-  const dashboardData = dashboardQ.data;
-  const displayProducts = PRODUCT_ORDER.filter((product) =>
-    dashboardData?.products.includes(product),
-  );
+  const productSearchQ = useQuery({
+    queryKey: ['products', 'promoter-dashboard-search', brandId, debouncedSearch],
+    queryFn: () =>
+      fetchProducts({
+        brand_id: brandId,
+        search: debouncedSearch,
+        limit: 10,
+      }),
+    enabled: !!brandId && !!editingProduct && debouncedSearch.trim().length > 0,
+    staleTime: 20_000,
+  });
 
-  const feedbackByOutletName = useMemo(() => {
-    const map = new Map<string, string[]>();
-    for (const entry of dashboardData?.feedback ?? []) {
-      const line = `${entry.date} | ${entry.reporter_name}: ${entry.text}`;
-      if (!map.has(entry.outlet_name)) map.set(entry.outlet_name, []);
-      map.get(entry.outlet_name)!.push(line);
-    }
-    return map;
-  }, [dashboardData]);
+  const patchMatchMutation = useMutation({
+    mutationFn: async (args: { itemId: string; productId: string }) => {
+      await api.patch(`/reports/promoter/items/${args.itemId}`, {
+        product_id: args.productId,
+      });
+    },
+    onSuccess: async () => {
+      await dashboardQ.refetch();
+      addToast('success', 'Product matched successfully');
+    },
+    onError: (error) => {
+      addToast('error', getAxiosMessage(error));
+    },
+  });
 
-  const tableData: PivotRow[] = useMemo(() => {
-    if (!dashboardData) return [];
-    return dashboardData.rows.map((row) => {
-      const values: Record<string, number | null> = {};
-      for (const date of dashboardData.dates) {
-        for (const product of displayProducts) {
-          values[metricKey(date, product)] = row.days[date]?.[product] ?? null;
-        }
-        values[metricKey(date, 'Total')] = row.days[date]?.total ?? null;
-      }
-
-      return {
-        outlet_id: row.outlet_id,
-        outlet_name: row.outlet_name,
-        feedback_text: (feedbackByOutletName.get(row.outlet_name) ?? []).join('\n'),
-        values,
-      };
-    });
-  }, [dashboardData, displayProducts, feedbackByOutletName]);
-
-  const columns = useMemo<ColumnDef<PivotRow>[]>(
-    () => [
-      {
-        id: 'outlet_name',
-        accessorKey: 'outlet_name',
-      },
-      ...(dashboardData
-        ? dashboardData.dates.flatMap((date) => [
-            ...displayProducts.map((product) => ({
-              id: metricKey(date, product),
-              accessorFn: (row: PivotRow) => row.values[metricKey(date, product)],
-            })),
-            {
-              id: metricKey(date, 'Total'),
-              accessorFn: (row: PivotRow) => row.values[metricKey(date, 'Total')],
-            },
-          ])
-        : []),
-      {
-        id: 'feedback_text',
-        accessorKey: 'feedback_text',
-      },
-    ],
-    [dashboardData, displayProducts],
-  );
+  const tableRows = dashboardQ.data?.rows ?? [];
+  const dates = dashboardQ.data?.dates ?? [];
+  const products = dashboardQ.data?.products ?? [];
+  const hasData = tableRows.length > 0;
 
   const table = useReactTable({
-    data: tableData,
-    columns,
+    data: tableRows,
+    columns: [{ id: 'outlet_name', accessorFn: (row) => row.outlet_name }],
     getCoreRowModel: getCoreRowModel(),
   });
 
-  const filteredFeedback = useMemo(() => {
+  const feedbackFiltered = useMemo(() => {
     const q = feedbackSearch.trim().toLowerCase();
-    if (!q) return dashboardData?.feedback ?? [];
-    return (dashboardData?.feedback ?? []).filter((entry) =>
-      entry.outlet_name.toLowerCase().includes(q),
-    );
-  }, [dashboardData?.feedback, feedbackSearch]);
+    const all = dashboardQ.data?.feedback ?? [];
+    if (!q) return all;
+    return all.filter((f) => f.outlet_name.toLowerCase().includes(q));
+  }, [dashboardQ.data?.feedback, feedbackSearch]);
 
-  const noBrandSelected = !appliedFilters.brand_id;
-  const hasNoRows = dashboardData != null && dashboardData.rows.length === 0;
+  const getCell = (row: (typeof tableRows)[number], date: string, key: string) => {
+    const raw = row.days[date]?.[key] as PromoterDashboardCell | undefined;
+    return raw;
+  };
+
+  const openEditor = (product: PromoterDashboardProduct) => {
+    setEditingProduct(product);
+    setProductSearch(product.label);
+    setDebouncedSearch(product.label);
+  };
+
+  const unmatchedItemIds = useMemo(() => {
+    if (!editingProduct || !dashboardQ.data) return [];
+    const ids = new Set<string>();
+    for (const row of dashboardQ.data.rows) {
+      for (const date of dashboardQ.data.dates) {
+        const cell = row.days[date]?.[editingProduct.key] as
+          | (PromoterDashboardCell & { item_id?: string | null })
+          | undefined;
+        if (cell?.item_id) ids.add(cell.item_id);
+      }
+    }
+    return Array.from(ids);
+  }, [editingProduct, dashboardQ.data]);
+
+  const onSelectMatchProduct = async (productId: string) => {
+    if (unmatchedItemIds.length === 0) {
+      addToast('error', 'No item IDs available in this dataset for patching');
+      return;
+    }
+    for (const itemId of unmatchedItemIds) {
+      // sequential to avoid overwhelming API if many items
+      await patchMatchMutation.mutateAsync({ itemId, productId });
+    }
+    setEditingProduct(null);
+    setProductSearch('');
+    setDebouncedSearch('');
+  };
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Promoter Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Excel-style outlet x day x product promoter pivot with feedback.
-        </p>
       </div>
 
       <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
           <Select
             label="Brand"
-            value={draftFilters.brand_id}
-            onValueChange={(brand_id) => setDraftFilters({ ...draftFilters, brand_id })}
-            disabled={isBrandManager}
+            value={brandId}
+            onValueChange={(value) => setBrandId(value)}
           >
             <option value="">Select brand</option>
             {(brandsQ.data ?? []).map((brand) => (
@@ -224,165 +184,128 @@ export function PromoterDashboardPage() {
           <Input
             label="Date From"
             type="date"
-            value={draftFilters.date_from ?? ''}
-            onChange={(e) =>
-              setDraftFilters({ ...draftFilters, date_from: e.target.value })
-            }
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
           />
 
           <Input
             label="Date To"
             type="date"
-            value={draftFilters.date_to ?? ''}
-            onChange={(e) => setDraftFilters({ ...draftFilters, date_to: e.target.value })}
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
           />
 
-          <div className="flex items-end gap-2 xl:col-span-2">
-            <Button className="w-full" onClick={() => setAppliedFilters(draftFilters)}>
-              Apply
-            </Button>
+          <div className="md:col-span-2 flex items-end">
             <Button
-              className="w-full"
-              variant="secondary"
-              onClick={() => {
-                const reset = {
-                  brand_id: managerBrandId || '',
-                  ...defaultDateRange(),
-                };
-                setDraftFilters(reset);
-                setAppliedFilters(reset);
-              }}
-            >
-              Reset
-            </Button>
-            <Button
-              className="w-full"
-              variant="secondary"
-              loading={exporting}
               leftIcon={<Download className="h-4 w-4" />}
-              disabled={noBrandSelected || hasNoRows || dashboardQ.isLoading}
+              loading={isExporting}
+              disabled={!brandId}
               onClick={async () => {
                 try {
-                  setExporting(true);
-                  await promoterDashboardApi.exportPromoterDashboard({
-                    brand_id: appliedFilters.brand_id,
-                    date_from: appliedFilters.date_from,
-                    date_to: appliedFilters.date_to,
-                  });
-                  addToast('success', 'Promoter dashboard export downloaded');
+                  setIsExporting(true);
+                  await exportPromoterDashboard(params);
+                  addToast('success', 'Export downloaded');
                 } catch (error) {
-                  const message =
-                    error instanceof Error
-                      ? error.message
-                      : 'Failed to export promoter dashboard';
-                  addToast('error', message);
+                  addToast('error', getAxiosMessage(error));
                 } finally {
-                  setExporting(false);
+                  setIsExporting(false);
                 }
               }}
             >
-              Export Excel
+              Export
             </Button>
           </div>
         </div>
       </div>
 
-      {noBrandSelected ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center">
-          <PackageSearch className="mx-auto h-12 w-12 text-slate-300" />
-          <h2 className="mt-3 text-lg font-semibold text-slate-900">
-            Select a brand to view the promoter dashboard
-          </h2>
+      {!brandId ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center text-slate-700">
+          Select a brand to view the promoter dashboard
         </div>
       ) : dashboardQ.isLoading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-20 w-full" />
-          <Skeleton variant="card" className="h-[460px]" />
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="space-y-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
+          </div>
         </div>
       ) : dashboardQ.isError ? (
         <div className="rounded-xl border border-red-200 bg-red-50 p-6">
           <AlertTriangle className="mb-2 h-6 w-6 text-red-600" />
-          <h2 className="font-semibold text-red-900">Failed to load promoter dashboard</h2>
-          <p className="mt-1 text-sm text-red-700">{getAxiosMessage(dashboardQ.error)}</p>
-          <Button className="mt-4" onClick={() => dashboardQ.refetch()}>
-            Retry
-          </Button>
-        </div>
-      ) : hasNoRows || !dashboardData ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center">
-          <PackageSearch className="mx-auto h-12 w-12 text-slate-300" />
-          <h2 className="mt-3 text-lg font-semibold text-slate-900">
-            No promoter reports found for this filter range.
+          <h2 className="font-semibold text-red-900">
+            Failed to load dashboard. Please try again.
           </h2>
+          <p className="mt-1 text-sm text-red-700">{getAxiosMessage(dashboardQ.error)}</p>
+        </div>
+      ) : !hasData ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center text-slate-700">
+          No promoter reports found for this period
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between px-1 pb-2 text-xs text-gray-400">
-            <div className="flex items-center gap-1.5">
-              {dashboardQ.isFetching ? (
-                <>
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-                  <span>Updating…</span>
-                </>
-              ) : (
-                <>
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400" />
-                  <span>Live</span>
-                </>
-              )}
-            </div>
-            <span>
-              {dashboardData.brand.name} | {dashboardData.date_range.from} to{' '}
-              {dashboardData.date_range.to}
-            </span>
-          </div>
-
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="max-h-[72vh] overflow-auto">
               <table className="w-max min-w-full border-collapse">
                 <thead>
                   <tr>
                     <th
-                      className="sticky left-0 top-0 z-40 min-w-64 border-b border-r border-slate-300 bg-slate-100 px-3 py-3 text-left text-sm font-semibold text-slate-900"
                       rowSpan={2}
+                      style={{ width: 200 }}
+                      className="sticky left-0 top-0 z-30 border-b border-r border-slate-300 bg-slate-100 px-2 py-1 text-left text-xs font-semibold text-slate-800"
                     >
                       Outlet
                     </th>
-                    {dashboardData.dates.map((date) => (
+                    {dates.map((date) => (
                       <th
                         key={date}
-                        className="sticky top-0 z-30 border-b border-r border-slate-200 bg-slate-100 px-2 py-3 text-center text-xs font-semibold text-slate-700"
-                        colSpan={displayProducts.length + 1}
+                        colSpan={products.length + 1}
+                        className="sticky top-0 z-20 border-b border-r border-slate-300 bg-slate-100 px-2 py-1 text-center text-xs font-semibold text-slate-800"
                       >
-                        {date}
+                        {formatDate(date)}
                       </th>
                     ))}
                     <th
-                      className="sticky top-0 z-30 min-w-80 border-b border-r border-slate-200 bg-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-700"
                       rowSpan={2}
+                      className="sticky top-0 z-20 border-b border-r border-slate-300 bg-slate-100 px-2 py-1 text-left text-xs font-semibold text-slate-800"
                     >
                       Feedback
                     </th>
                   </tr>
                   <tr>
-                    {dashboardData.dates.flatMap((date) => [
-                      ...displayProducts.map((product) => (
+                    {dates.flatMap((date) => [
+                      ...products.map((product) => (
                         <th
-                          key={metricKey(date, product)}
-                          className={`sticky top-0 z-30 min-w-28 border-b border-r border-slate-200 px-2 py-3 text-center text-xs font-semibold ${
-                            OFFER_COLUMNS.has(product)
-                              ? 'bg-amber-50 text-amber-800'
-                              : product === 'Gifts'
-                                ? 'bg-sky-50 text-sky-800'
-                                : 'bg-slate-100 text-slate-700'
-                          }`}
+                          key={`${date}-${product.key}`}
+                          className="sticky top-0 z-20 border-b border-r border-slate-200 px-2 py-1 text-center text-[11px] font-semibold"
+                          style={{
+                            backgroundColor: product.unmatched
+                              ? '#FFE4CC'
+                              : product.is_offer
+                                ? '#FFFACD'
+                                : product.is_gift
+                                  ? '#E6F3FF'
+                                  : '#FFFFFF',
+                          }}
                         >
-                          {product}
+                          <button
+                            type="button"
+                            disabled={!product.unmatched}
+                            onClick={() => openEditor(product)}
+                            className={`inline-flex items-center gap-1 ${
+                              product.unmatched
+                                ? 'cursor-pointer hover:underline'
+                                : 'cursor-default'
+                            }`}
+                          >
+                            {product.unmatched ? '⚠ ' : ''}
+                            {product.label}
+                          </button>
                         </th>
                       )),
                       <th
-                        key={metricKey(date, 'Total')}
-                        className="sticky top-0 z-30 min-w-24 border-b border-r border-slate-200 bg-slate-200 px-2 py-3 text-center text-xs font-semibold text-slate-800"
+                        key={`${date}-total`}
+                        className="sticky top-0 z-20 border-b border-r border-slate-200 bg-slate-50 px-2 py-1 text-center text-[11px] font-bold"
                       >
                         Total
                       </th>,
@@ -390,114 +313,187 @@ export function PromoterDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {table.getRowModel().rows.map((row) => (
-                    <tr key={row.original.outlet_id}>
-                      <td className="sticky left-0 z-20 min-w-64 border-b border-r border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900">
-                        {row.original.outlet_name}
+                  {table.getRowModel().rows.map((tRow) => (
+                    <tr key={tRow.original.outlet_id} className="text-sm">
+                      <td
+                        className="sticky left-0 z-10 border-b border-r border-slate-200 bg-white px-2 py-1"
+                        style={{ width: 200 }}
+                      >
+                        {tRow.original.outlet_name}
                       </td>
-                      {dashboardData.dates.flatMap((date) => [
-                        ...displayProducts.map((product) => {
-                          const value = row.original.values[metricKey(date, product)];
+                      {dates.flatMap((date) => [
+                        ...products.map((product) => {
+                          const cell = getCell(tRow.original, date, product.key);
+                          const qty = cell?.quantity ?? 0;
+                          const status = cell?.status ?? '';
                           return (
                             <td
-                              key={`${row.original.outlet_id}-${metricKey(date, product)}`}
-                              className={`min-w-28 border-b border-r border-slate-100 px-2 py-1 text-center text-sm ${
-                                OFFER_COLUMNS.has(product)
-                                  ? 'bg-amber-50'
-                                  : product === 'Gifts'
-                                    ? 'bg-sky-50'
-                                    : ''
-                              }`}
+                              key={`${tRow.original.outlet_id}-${date}-${product.key}`}
+                              className="border-b border-r border-slate-100 px-2 py-1 text-center"
                             >
-                              {renderPivotValue(value)}
+                              {qty > 0 ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <span>{qty}</span>
+                                  <span
+                                    className={`h-2 w-2 rounded-full ${statusDotClass[status] ?? 'bg-slate-300'}`}
+                                  />
+                                </span>
+                              ) : (
+                                ''
+                              )}
                             </td>
                           );
                         }),
                         <td
-                          key={`${row.original.outlet_id}-${metricKey(date, 'Total')}`}
-                          className="min-w-24 border-b border-r border-slate-100 bg-slate-50 px-2 py-1 text-center text-sm font-semibold"
+                          key={`${tRow.original.outlet_id}-${date}-total`}
+                          className="border-b border-r border-slate-100 px-2 py-1 text-center font-bold"
                         >
-                          {renderPivotValue(
-                            row.original.values[metricKey(date, 'Total')],
-                          )}
+                          {Number(tRow.original.days[date]?.total ?? 0) || ''}
                         </td>,
                       ])}
-                      <td className="min-w-80 border-b border-r border-slate-100 px-3 py-2 text-xs text-slate-700 whitespace-pre-line">
-                        {row.original.feedback_text || ''}
+                      <td className="border-b border-r border-slate-100 px-2 py-1 text-xs text-slate-700">
+                        {(dashboardQ.data?.feedback ?? [])
+                          .filter((f) => f.outlet_id === tRow.original.outlet_id)
+                          .map((f) => `${formatDate(f.date)} - ${f.reporter_name ?? ''}: ${f.text}`)
+                          .join('\n')}
                       </td>
                     </tr>
                   ))}
-
-                  <tr className="bg-slate-100 font-semibold">
-                    <td className="sticky left-0 z-20 border-r border-t border-slate-300 bg-slate-200 px-3 py-2 text-sm">
+                  <tr className="bg-slate-100 font-bold">
+                    <td className="sticky left-0 z-10 border-r border-t border-slate-300 bg-slate-100 px-2 py-1">
                       Total
                     </td>
-                    {dashboardData.dates.flatMap((date) => [
-                      ...displayProducts.map((product) => (
+                    {dates.flatMap((date) => [
+                      ...products.map((product) => (
                         <td
-                          key={`total-${metricKey(date, product)}`}
-                          className={`border-r border-t border-slate-300 px-2 py-2 text-center text-sm ${
-                            OFFER_COLUMNS.has(product)
-                              ? 'bg-amber-100'
-                              : product === 'Gifts'
-                                ? 'bg-sky-100'
-                                : 'bg-slate-100'
-                          }`}
+                          key={`total-${date}-${product.key}`}
+                          className="border-r border-t border-slate-300 px-2 py-1 text-center"
                         >
-                          {renderPivotValue(dashboardData.totals[date]?.[product])}
+                          {dashboardQ.data?.totals[date]?.[product.key] || ''}
                         </td>
                       )),
                       <td
-                        key={`total-${metricKey(date, 'Total')}`}
-                        className="border-r border-t border-slate-300 bg-slate-200 px-2 py-2 text-center text-sm font-bold"
+                        key={`total-${date}-total`}
+                        className="border-r border-t border-slate-300 px-2 py-1 text-center font-bold"
                       >
-                        {renderPivotValue(dashboardData.totals[date]?.total)}
+                        {dashboardQ.data?.totals[date]?.total || ''}
                       </td>,
                     ])}
-                    <td className="border-r border-t border-slate-300 bg-slate-100 px-3 py-2 text-xs text-slate-600">
-                      {dashboardData.feedback.length} feedback entries
-                    </td>
+                    <td className="border-r border-t border-slate-300 px-2 py-1" />
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <MessageSquareText className="h-5 w-5 text-slate-500" />
-                <h2 className="text-lg font-semibold text-slate-900">Feedback Panel</h2>
-              </div>
-              <div className="w-full max-w-sm">
-                <Input
-                  placeholder="Search by outlet name..."
-                  value={feedbackSearch}
-                  onChange={(e) => setFeedbackSearch(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="max-h-72 space-y-2 overflow-auto">
-              {filteredFeedback.length === 0 ? (
-                <p className="text-sm text-slate-500">No feedback matches the search.</p>
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+            <button
+              type="button"
+              onClick={() => setFeedbackOpen((v) => !v)}
+              className="flex w-full items-center justify-between px-4 py-3 text-left"
+            >
+              <span className="font-semibold text-slate-900">Customer Feedback</span>
+              {feedbackOpen ? (
+                <ChevronUp className="h-4 w-4 text-slate-500" />
               ) : (
-                filteredFeedback.map((entry, index) => (
-                  <div
-                    key={`${entry.outlet_name}-${entry.date}-${index}`}
-                    className="rounded-lg border border-slate-200 bg-slate-50 p-3"
-                  >
-                    <p className="text-xs font-semibold text-slate-700">
-                      {entry.outlet_name} | {entry.date} | {entry.reporter_name}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-900 whitespace-pre-wrap">
-                      {entry.text}
-                    </p>
+                <ChevronDown className="h-4 w-4 text-slate-500" />
+              )}
+            </button>
+
+            {feedbackOpen && (
+              <div className="space-y-3 border-t border-slate-200 p-4">
+                <div className="max-w-sm">
+                  <Input
+                    placeholder="Search by outlet name..."
+                    value={feedbackSearch}
+                    onChange={(e) => setFeedbackSearch(e.target.value)}
+                  />
+                </div>
+                {feedbackFiltered.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    No feedback recorded for this period.
+                  </p>
+                ) : (
+                  <div className="max-h-80 space-y-2 overflow-auto">
+                    {feedbackFiltered.map((entry, idx) => (
+                      <div
+                        key={`${entry.outlet_id}-${entry.date}-${idx}`}
+                        className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                      >
+                        <p className="text-sm font-semibold text-slate-900">
+                          {entry.outlet_name}
+                        </p>
+                        <p className="text-xs text-slate-600">
+                          {formatDate(entry.date)} | {entry.reporter_name ?? 'Unknown'}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-800" dir="auto">
+                          {entry.text}
+                        </p>
+                      </div>
+                    ))}
                   </div>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-4 shadow-xl">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-900">
+                Match unmatched column: {editingProduct.label}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingProduct(null)}
+                className="rounded p-1 text-slate-500 hover:bg-slate-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Input
+                className="pl-9"
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                placeholder="Search products..."
+              />
+            </div>
+
+            <p className="mt-2 text-xs text-slate-500">
+              Current raw name: <span className="font-medium">{editingProduct.label}</span>
+            </p>
+            <p className="text-xs text-slate-500">
+              Affected unmatched item IDs found: {unmatchedItemIds.length}
+            </p>
+
+            <div className="mt-3 max-h-72 space-y-2 overflow-auto">
+              {productSearchQ.isFetching ? (
+                <Skeleton className="h-10 w-full" />
+              ) : (productSearchQ.data?.data ?? []).length === 0 ? (
+                <p className="text-sm text-slate-500">No matching products found.</p>
+              ) : (
+                productSearchQ.data!.data.map((product) => (
+                  <button
+                    key={product.id}
+                    type="button"
+                    disabled={patchMatchMutation.isPending}
+                    onClick={() => onSelectMatchProduct(product.id)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    <div className="font-medium text-slate-900">{product.canonicalName}</div>
+                    <div className="text-xs text-slate-500">{product.id}</div>
+                  </button>
                 ))
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
