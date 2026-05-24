@@ -6,9 +6,9 @@ import { UnknownSenders } from '@/pages/admin/UnknownSenders';
 import { Users } from '@/pages/admin/Users';
 import { Dashboard } from '@/pages/Dashboard';
 import { MerchandiserDashboard } from '@/pages/dashboard/MerchandiserDashboard';
-import { PromoterDashboard } from '@/pages/dashboard/PromoterDashboard';
 import { Login } from '@/pages/Login';
 import { MessageLog } from '@/pages/messages/MessageLog';
+import { PromoterDashboardPage } from '@/pages/PromoterDashboardPage';
 import { MerchandiserReportDetail } from '@/pages/reports/MerchandiserReportDetail';
 import { MerchandiserReports } from '@/pages/reports/MerchandiserReports';
 import { PromoterReportDetail } from '@/pages/reports/PromoterReportDetail';
@@ -115,7 +115,7 @@ export const router = createBrowserRouter([
             path: 'dashboard/promoter',
             element: (
               <DashboardPromoterRoles>
-                <PromoterDashboard />
+                <PromoterDashboardPage />
               </DashboardPromoterRoles>
             ),
           },
