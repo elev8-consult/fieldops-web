@@ -15,6 +15,9 @@ function getCellBg(cell: MerchandiserDashboardCell | undefined): string {
   if (!cell || cell.quantity === null || cell.quantity === 0) {
     return 'bg-red-50';
   }
+  if (!cell.expiry_date && !cell.expiry_raw) {
+    return 'bg-slate-100'; // has stock but no expiry recorded
+  }
   if (cell.expiry_date) {
     const days = differenceInDays(new Date(cell.expiry_date), new Date());
     if (days < 0) return 'bg-red-100';
@@ -117,6 +120,8 @@ export function PivotTableCell({ cell, canEdit }: PivotTableCellProps) {
     cell?.expiry_date ?? null,
     cell?.expiry_raw ?? null,
   );
+  const hasStock = cell != null && cell.quantity != null && cell.quantity > 0;
+  const expiryMissing = hasStock && !expiryLabel;
   const bgClass = getCellBg(cell);
   const expiryClass = getExpiryTextClass(cell?.expiry_date ?? null);
 
@@ -141,11 +146,13 @@ export function PivotTableCell({ cell, canEdit }: PivotTableCellProps) {
             <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
           )}
         </div>
-        {expiryLabel && (
+        {expiryLabel ? (
           <span className={cn('text-xs leading-tight', expiryClass)}>
             {expiryLabel}
           </span>
-        )}
+        ) : expiryMissing ? (
+          <span className="text-xs leading-tight text-slate-400">—</span>
+        ) : null}
       </div>
     </td>
   );
