@@ -1,5 +1,7 @@
 import { useUpdateMerchandiserItem } from '@/hooks/useUpdateMerchandiserItem';
+import { cn } from '@/lib/utils';
 import type { MerchandiserDashboardCell } from '@/types';
+import { differenceInDays, format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -8,13 +10,48 @@ interface PivotTableCellProps {
   canEdit: boolean;
 }
 
+// Background color matches PivotCell.tsx getCellColor logic
+function getCellBg(cell: MerchandiserDashboardCell | undefined): string {
+  if (!cell || cell.quantity === null || cell.quantity === 0) {
+    return 'bg-red-50';
+  }
+  if (cell.expiry_date) {
+    const days = differenceInDays(new Date(cell.expiry_date), new Date());
+    if (days < 0) return 'bg-red-100';
+    if (days <= 30) return 'bg-yellow-50';
+  }
+  return '';
+}
+
+function getExpiryTextClass(expiryDate: string | null): string {
+  if (!expiryDate) return 'text-slate-400';
+  const days = differenceInDays(new Date(expiryDate), new Date());
+  if (days < 0) return 'text-red-600 font-semibold';
+  if (days <= 30) return 'text-amber-600 font-semibold';
+  return 'text-slate-400';
+}
+
+function formatExpiry(
+  expiryDate: string | null,
+  expiryRaw: string | null,
+): string | null {
+  if (expiryDate) {
+    try {
+      return format(new Date(expiryDate), 'dd MMM yy');
+    } catch {
+      // fall through to raw
+    }
+  }
+  return expiryRaw ?? null;
+}
+
 export function PivotTableCell({ cell, canEdit }: PivotTableCellProps) {
   const mutation = useUpdateMerchandiserItem();
   const [editing, setEditing] = useState(false);
   const [inputVal, setInputVal] = useState('');
-  const [optimisticQuantity, setOptimisticQuantity] = useState<number | null | undefined>(
-    undefined,
-  );
+  const [optimisticQuantity, setOptimisticQuantity] = useState<
+    number | null | undefined
+  >(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const displayQty = optimisticQuantity ?? cell?.quantity ?? null;
@@ -39,12 +76,10 @@ export function PivotTableCell({ cell, canEdit }: PivotTableCellProps) {
       setEditing(false);
       return;
     }
-
     if (parsed === (cell.quantity ?? null)) {
       setEditing(false);
       return;
     }
-
     const previous = cell.quantity ?? null;
     setOptimisticQuantity(parsed);
     mutation.mutate(
@@ -63,7 +98,7 @@ export function PivotTableCell({ cell, canEdit }: PivotTableCellProps) {
 
   if (editing) {
     return (
-      <td className="min-w-36 border-b border-r border-slate-100 p-0 align-top">
+      <td className="min-w-36 border-b border-r border-slate-100 p-0 align-middle">
         <input
           ref={inputRef}
           type="number"
@@ -78,18 +113,39 @@ export function PivotTableCell({ cell, canEdit }: PivotTableCellProps) {
     );
   }
 
+  const expiryLabel = formatExpiry(
+    cell?.expiry_date ?? null,
+    cell?.expiry_raw ?? null,
+  );
+  const bgClass = getCellBg(cell);
+  const expiryClass = getExpiryTextClass(cell?.expiry_date ?? null);
+
   return (
     <td
       onClick={startEdit}
-      className={`min-w-36 border-b border-r border-slate-100 px-2 py-1 text-center text-sm align-top ${
+      className={cn(
+        'min-w-36 border-b border-r border-slate-100 px-2 py-1.5 text-center align-middle',
+        bgClass,
         canEdit && cell?.item_id
-          ? 'cursor-pointer hover:bg-blue-50 hover:ring-1 hover:ring-blue-300'
-          : ''
-      } ${mutation.isPending ? 'opacity-60' : ''}`}
+          ? 'cursor-pointer hover:brightness-95 hover:ring-1 hover:ring-inset hover:ring-blue-300'
+          : '',
+        mutation.isPending ? 'opacity-60' : '',
+      )}
     >
-      <div className="flex items-center justify-center gap-1">
-        <span>{displayQty ?? ''}</span>
-        {mutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />}
+      <div className="flex flex-col items-center gap-0.5">
+        <div className="flex items-center justify-center gap-1">
+          <span className="text-sm font-medium text-slate-900">
+            {displayQty ?? ''}
+          </span>
+          {mutation.isPending && (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+          )}
+        </div>
+        {expiryLabel && (
+          <span className={cn('text-xs leading-tight', expiryClass)}>
+            {expiryLabel}
+          </span>
+        )}
       </div>
     </td>
   );
