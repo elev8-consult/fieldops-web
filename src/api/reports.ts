@@ -67,6 +67,13 @@ export async function patchMerchandiserReport(
   await api.patch(`/reports/merchandiser/${id}`, body);
 }
 
+export async function patchParsedReport(
+  parsedReportId: string,
+  body: Record<string, unknown>,
+): Promise<void> {
+  await api.patch(`/review/${parsedReportId}`, body);
+}
+
 export async function patchMerchandiserItem(
   reportId: string,
   itemId: string,
