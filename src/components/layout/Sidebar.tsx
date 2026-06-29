@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Package,
   Tag,
+  Upload,
   UserRoundX,
   UserCog,
   Users,
@@ -119,6 +120,10 @@ export function Sidebar() {
             <NavLink to="/admin/products" className={navClass}>
               <Tag className="h-5 w-5 shrink-0" />
               Products
+            </NavLink>
+            <NavLink to="/admin/catalog-import" className={navClass}>
+              <Upload className="h-5 w-5 shrink-0" />
+              Import Catalog
             </NavLink>
             <NavLink to="/admin/unknown-senders" className={navClass}>
               <UserRoundX className="h-5 w-5 shrink-0" />

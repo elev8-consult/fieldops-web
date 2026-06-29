@@ -1,5 +1,6 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Brands } from '@/pages/admin/Brands';
+import { CatalogImport } from '@/pages/admin/CatalogImport';
 import { Outlets } from '@/pages/admin/Outlets';
 import { Products } from '@/pages/admin/Products';
 import { UnknownSenders } from '@/pages/admin/UnknownSenders';
@@ -172,6 +173,14 @@ export const router = createBrowserRouter([
             element: (
               <BrandManagerPlus>
                 <Products />
+              </BrandManagerPlus>
+            ),
+          },
+          {
+            path: 'admin/catalog-import',
+            element: (
+              <BrandManagerPlus>
+                <CatalogImport />
               </BrandManagerPlus>
             ),
           },

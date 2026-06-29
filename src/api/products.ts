@@ -95,3 +95,57 @@ export async function addProductAlias(
 export async function deleteProductAlias(aliasId: string): Promise<void> {
   await api.delete(`/products/aliases/${aliasId}`);
 }
+
+// ── Catalog import (Excel) ──────────────────────────────────────────────
+
+export type ImportRowStatus = 'created' | 'updated' | 'skipped' | 'conflict';
+
+export interface ImportRowResult {
+  row: number;
+  productName: string | null;
+  sku: string | null;
+  barcode: string | null;
+  status: ImportRowStatus;
+  productId?: string | null;
+  reason?: string;
+}
+
+export interface ImportCatalogResult {
+  brandId: string;
+  dryRun: boolean;
+  totalRows: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  conflicts: number;
+  rows: ImportRowResult[];
+}
+
+export async function importCatalog(args: {
+  brandId: string;
+  file: File;
+  dryRun: boolean;
+}): Promise<ImportCatalogResult> {
+  const form = new FormData();
+  form.append('file', args.file);
+  form.append('brandId', args.brandId);
+  if (args.dryRun) form.append('dryRun', 'true');
+
+  const { data } = await api.post<ImportCatalogResult>(
+    '/products/import',
+    form,
+    {
+      timeout: 120_000,
+      // Let the browser set multipart/form-data with its boundary by
+      // stripping the instance's default application/json header.
+      transformRequest: (body, headers) => {
+        if (headers) {
+          delete (headers as Record<string, unknown>)['Content-Type'];
+          delete (headers as Record<string, unknown>)['content-type'];
+        }
+        return body;
+      },
+    },
+  );
+  return data;
+}
