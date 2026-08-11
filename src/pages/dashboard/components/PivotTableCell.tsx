@@ -81,7 +81,9 @@ export function PivotTableCell({ cell, canEdit }: PivotTableCellProps) {
   }, [editing]);
 
   const batches = cell?.batches ?? [];
-  const hasBatches = batches.length > 0;
+  // A single lot renders as the normal one-line cell; two or more are shown
+  // as separate quantity/expiry lines.
+  const hasBatches = batches.length > 1;
 
   const startEdit = () => {
     // A batched cell's quantity is the sum of its lots — edit it in the
