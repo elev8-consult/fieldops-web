@@ -348,6 +348,13 @@ export interface MerchandiserDashboardParams {
   reported_by?: string;
 }
 
+export interface MerchandiserDashboardBatch {
+  id: string;
+  quantity: number | null;
+  expiry_date: string | null;
+  expiry_raw: string | null;
+}
+
 export interface MerchandiserDashboardCell {
   item_id: string | null;
   quantity: number | null;
@@ -357,6 +364,8 @@ export interface MerchandiserDashboardCell {
   match_type: string | null;
   match_confidence: number | null;
   has_batches: boolean;
+  /** Separate expiry lots counted for this product at this outlet. */
+  batches?: MerchandiserDashboardBatch[];
 }
 
 export interface MerchandiserDashboardRow {
