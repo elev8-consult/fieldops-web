@@ -1,4 +1,5 @@
 import { AppLayout } from '@/components/layout/AppLayout';
+import { AppUsers } from '@/pages/admin/AppUsers';
 import { Brands } from '@/pages/admin/Brands';
 import { CatalogImport } from '@/pages/admin/CatalogImport';
 import { Outlets } from '@/pages/admin/Outlets';
@@ -181,6 +182,14 @@ export const router = createBrowserRouter([
             element: (
               <BrandManagerPlus>
                 <CatalogImport />
+              </BrandManagerPlus>
+            ),
+          },
+          {
+            path: 'admin/app-users',
+            element: (
+              <BrandManagerPlus>
+                <AppUsers />
               </BrandManagerPlus>
             ),
           },

@@ -13,6 +13,7 @@ import {
   MapPin,
   MessageSquare,
   Package,
+  Smartphone,
   Tag,
   Upload,
   UserRoundX,
@@ -124,6 +125,10 @@ export function Sidebar() {
             <NavLink to="/admin/catalog-import" className={navClass}>
               <Upload className="h-5 w-5 shrink-0" />
               Import Catalog
+            </NavLink>
+            <NavLink to="/admin/app-users" className={navClass}>
+              <Smartphone className="h-5 w-5 shrink-0" />
+              App Users
             </NavLink>
             <NavLink to="/admin/unknown-senders" className={navClass}>
               <UserRoundX className="h-5 w-5 shrink-0" />
