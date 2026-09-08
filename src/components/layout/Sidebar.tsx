@@ -47,7 +47,7 @@ export function Sidebar() {
             <BarChart3 className="h-6 w-6 text-white" />
           </div>
           <div>
-            <div className="text-lg font-bold text-white">FieldOps</div>
+            <div className="text-lg font-bold text-white">I Prom</div>
             <div className="text-xs text-slate-400">Operations Platform</div>
           </div>
         </div>

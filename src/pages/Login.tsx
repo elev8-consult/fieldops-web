@@ -68,7 +68,7 @@ export function Login() {
           <div className="mx-auto mb-8 inline-flex rounded-2xl bg-white/20 p-3">
             <BarChart3 className="h-12 w-12 text-white" />
           </div>
-          <h1 className="text-4xl font-bold text-white">FieldOps</h1>
+          <h1 className="text-4xl font-bold text-white">I Prom</h1>
           <p className="mt-2 text-indigo-200">
             Field Operations Management Platform
           </p>
