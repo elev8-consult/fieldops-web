@@ -59,7 +59,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto py-2">
-        <NavLink to="/" end className={navClass}>
+        <NavLink to="/dashboard" end className={navClass}>
           <LayoutDashboard className="h-5 w-5 shrink-0" />
           Dashboard
         </NavLink>

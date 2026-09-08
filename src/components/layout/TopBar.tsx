@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 
 const titles: Record<string, string> = {
-  '/': 'Dashboard',
+  '/dashboard': 'Dashboard',
   '/review': 'Review Queue',
   '/messages': 'Message Log',
   '/reports/merchandiser': 'Merchandiser Reports',

@@ -39,14 +39,14 @@ export function Login() {
   });
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const onSubmit = async (data: { email: string; password: string }) => {
     try {
       const response = await authApi.login(data);
       setAuth(response.user, response.access_token);
-      navigate('/');
+      navigate('/dashboard');
     } catch (error: unknown) {
       const err = error as {
         response?: { data?: { message?: string | string[] } };

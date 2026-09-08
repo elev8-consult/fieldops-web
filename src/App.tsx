@@ -28,7 +28,6 @@ import {
   Navigate,
   Outlet,
   RouterProvider,
-  useLocation,
 } from 'react-router-dom';
 
 const queryClient = new QueryClient({
@@ -43,11 +42,7 @@ const queryClient = new QueryClient({
 
 function RequireAuth() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const location = useLocation();
   if (!isAuthenticated) {
-    // The bare root is public marketing content — every other app route
-    // still bounces to /login.
-    if (location.pathname === '/') return <Landing />;
     return <Navigate to="/login" replace />;
   }
   return <Outlet />;
@@ -56,14 +51,19 @@ function RequireAuth() {
 function LoginGate() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   return <Login />;
 }
 
+function CatchAll() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/'} replace />;
+}
+
 function SuperAdminOnly({ children }: { children: ReactNode }) {
   const ok = useAuthStore((s) => s.hasRole('super_admin'));
-  if (!ok) return <Navigate to="/" replace />;
+  if (!ok) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -71,7 +71,7 @@ function BrandManagerPlus({ children }: { children: ReactNode }) {
   const ok = useAuthStore((s) =>
     s.hasRole('super_admin', 'brand_manager'),
   );
-  if (!ok) return <Navigate to="/" replace />;
+  if (!ok) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -79,20 +79,25 @@ function DashboardPromoterRoles({ children }: { children: ReactNode }) {
   const ok = useAuthStore((s) =>
     s.hasRole('super_admin', 'brand_manager', 'supervisor'),
   );
-  if (!ok) return <Navigate to="/" replace />;
+  if (!ok) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
 export const router = createBrowserRouter([
+  // Public marketing page — always renders at the bare root, regardless
+  // of auth state. Login lives at /login; the authenticated app lives
+  // under its own paths below (starting with /dashboard).
+  { path: '/', element: <Landing /> },
   { path: '/login', element: <LoginGate /> },
   {
-    path: '/',
+    // Pathless layout route: guards every child path below without
+    // claiming "/" itself, so it never competes with the Landing route.
     element: <RequireAuth />,
     children: [
       {
         element: <AppLayout />,
         children: [
-          { index: true, element: <Dashboard /> },
+          { path: 'dashboard', element: <Dashboard /> },
           { path: 'review', element: <ReviewQueue /> },
           {
             path: 'review/:id',
@@ -203,7 +208,7 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: '*', element: <Navigate to="/" replace /> },
+  { path: '*', element: <CatchAll /> },
 ]);
 
 export function App() {

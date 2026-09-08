@@ -37,7 +37,7 @@ export function PromoterDashboard() {
     [user],
   );
   if (!allowed) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const managerBrandId = user?.role === ROLES.BRAND_MANAGER ? (user.brandId ?? '') : '';
