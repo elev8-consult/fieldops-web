@@ -54,9 +54,9 @@ export function Dashboard() {
   });
 
   const coverageQ = useMerchandiserDashboard({
-    brandId: brandId ?? '',
-    dateFrom: from30,
-    dateTo: todayShort,
+    brand_id: brandId,
+    date_from: from30,
+    date_to: todayShort,
   });
 
   const summaryQ = useAnalyticsSummary({
@@ -165,7 +165,7 @@ export function Dashboard() {
   const outletsNeedingAttention = useMemo(() => {
     const rows = coverageQ.data?.rows ?? [];
     return rows
-      .filter((r) => Object.values(r.cells).some((c) => c.status === 'flagged'))
+      .filter((r) => r.has_flags || r.pending_review)
       .slice(0, 5);
   }, [coverageQ.data]);
 
@@ -328,12 +328,8 @@ export function Dashboard() {
                   <EmptyState title="All outlets are clear — nothing flagged or pending" />
                 ) : (
                   <ul className="divide-y divide-slate-100">
-                    {outletsNeedingAttention.map((row) => {
-                      const flaggedCount = Object.values(row.cells).filter(
-                        (c) => c.status === 'flagged',
-                      ).length;
-                      return (
-                      <li key={row.outletId}>
+                    {outletsNeedingAttention.map((row) => (
+                      <li key={row.outlet_id}>
                         <Link
                           to="/review"
                           className="flex items-center justify-between gap-3 py-3 transition hover:bg-slate-50"
@@ -344,23 +340,29 @@ export function Dashboard() {
                             </div>
                             <div>
                               <div className="font-medium text-slate-900">
-                                {row.outletName}
+                                {row.outlet_name}
                               </div>
-                              {row.isDepot && (
-                                <div className="text-xs text-slate-400">Depot</div>
-                              )}
+                              <div className="text-xs text-slate-400">
+                                {row.region_name ?? (row.is_depot ? 'Depot' : '—')}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
-                              {flaggedCount} flagged item{flaggedCount === 1 ? '' : 's'}
-                            </span>
+                            {row.pending_review && (
+                              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                Pending review
+                              </span>
+                            )}
+                            {row.has_flags && (
+                              <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+                                Flagged
+                              </span>
+                            )}
                             <ChevronRight className="h-4 w-4 text-slate-400" />
                           </div>
                         </Link>
                       </li>
-                      );
-                    })}
+                    ))}
                   </ul>
                 )}
               </div>
