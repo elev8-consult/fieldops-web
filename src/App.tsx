@@ -8,6 +8,7 @@ import { UnknownSenders } from '@/pages/admin/UnknownSenders';
 import { Users } from '@/pages/admin/Users';
 import { Dashboard } from '@/pages/Dashboard';
 import { MerchandiserDashboard } from '@/pages/dashboard/MerchandiserDashboard';
+import { Landing } from '@/pages/Landing';
 import { Login } from '@/pages/Login';
 import { MessageLog } from '@/pages/messages/MessageLog';
 import { PromoterDashboardPage } from '@/pages/PromoterDashboardPage';
@@ -27,6 +28,7 @@ import {
   Navigate,
   Outlet,
   RouterProvider,
+  useLocation,
 } from 'react-router-dom';
 
 const queryClient = new QueryClient({
@@ -41,7 +43,11 @@ const queryClient = new QueryClient({
 
 function RequireAuth() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const location = useLocation();
   if (!isAuthenticated) {
+    // The bare root is public marketing content — every other app route
+    // still bounces to /login.
+    if (location.pathname === '/') return <Landing />;
     return <Navigate to="/login" replace />;
   }
   return <Outlet />;

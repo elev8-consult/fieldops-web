@@ -14,29 +14,50 @@ import {
   useReportsByDay,
   useTopFlaggedProducts,
 } from '@/hooks/useAnalytics';
+import { useMerchandiserDashboard } from '@/hooks/useMerchandiserDashboard';
 import { useReviewQueue } from '@/hooks/useReview';
+import { fetchBrand } from '@/api/brands';
+import { DashboardSummaryCards } from '@/pages/dashboard/components/DashboardSummaryCards';
 import { formatRelative } from '@/lib/utils';
 import type { ParsedReport } from '@/types';
+import { useQuery } from '@tanstack/react-query';
 import {
   AlertTriangle,
   CheckCircle2,
   ChevronRight,
   FileText,
+  FlagTriangleRight,
+  Store,
   Zap,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { endOfDay, startOfDay, subDays } from 'date-fns';
+import { endOfDay, format, startOfDay, subDays } from 'date-fns';
 
 export function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const brandId =
-    user?.role === 'brand_manager' ? user.brandId ?? undefined : undefined;
+  const isBrandManager = user?.role === 'brand_manager';
+  const brandId = isBrandManager ? user.brandId ?? undefined : undefined;
 
   const todayStart = startOfDay(new Date()).toISOString();
   const todayEnd = endOfDay(new Date()).toISOString();
   const from14 = subDays(new Date(), 14).toISOString();
+  const from30 = format(subDays(new Date(), 30), 'yyyy-MM-dd');
+  const todayShort = format(new Date(), 'yyyy-MM-dd');
+
+  const brandQ = useQuery({
+    queryKey: ['brand', brandId],
+    queryFn: () => fetchBrand(brandId as string),
+    enabled: Boolean(brandId),
+    staleTime: 5 * 60_000,
+  });
+
+  const coverageQ = useMerchandiserDashboard({
+    brandId: brandId ?? '',
+    dateFrom: from30,
+    dateTo: todayShort,
+  });
 
   const summaryQ = useAnalyticsSummary({
     brand_id: brandId,
@@ -141,6 +162,13 @@ export function Dashboard() {
     return Math.max(0, Math.min(100, Math.round(100 - rate * 100)));
   }, [flaggedQ.data]);
 
+  const outletsNeedingAttention = useMemo(() => {
+    const rows = coverageQ.data?.rows ?? [];
+    return rows
+      .filter((r) => Object.values(r.cells).some((c) => c.status === 'flagged'))
+      .slice(0, 5);
+  }, [coverageQ.data]);
+
   const firstName = user?.fullName?.split(' ')[0] ?? 'there';
   const hour = new Date().getHours();
   const greet =
@@ -208,6 +236,14 @@ export function Dashboard() {
         <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
         <p className="mt-1 text-slate-600">
           {greet}, {firstName}
+          {isBrandManager && brandQ.data?.name ? (
+            <>
+              {' — '}
+              <span className="font-semibold text-slate-900">
+                {brandQ.data.name}
+              </span>
+            </>
+          ) : null}
         </p>
       </div>
 
@@ -258,6 +294,82 @@ export function Dashboard() {
           <p className="text-sm text-slate-500">auto-parsed rate</p>
         </div>
       </div>
+
+      {isBrandManager && brandId ? (
+        <Card
+          title="Store Coverage"
+          subtitle="Last 30 days"
+          action={
+            <Link
+              to="/dashboard/merchandiser"
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+            >
+              Full pivot
+            </Link>
+          }
+          padding
+        >
+          {coverageQ.isLoading && !coverageQ.data ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} variant="card" />
+              ))}
+            </div>
+          ) : coverageQ.data ? (
+            <div className="space-y-6">
+              <DashboardSummaryCards summary={coverageQ.data.summary} />
+
+              <div>
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <FlagTriangleRight className="h-4 w-4 text-amber-500" />
+                  Outlets needing attention
+                </div>
+                {outletsNeedingAttention.length === 0 ? (
+                  <EmptyState title="All outlets are clear — nothing flagged or pending" />
+                ) : (
+                  <ul className="divide-y divide-slate-100">
+                    {outletsNeedingAttention.map((row) => {
+                      const flaggedCount = Object.values(row.cells).filter(
+                        (c) => c.status === 'flagged',
+                      ).length;
+                      return (
+                      <li key={row.outletId}>
+                        <Link
+                          to="/review"
+                          className="flex items-center justify-between gap-3 py-3 transition hover:bg-slate-50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
+                              <Store className="h-4 w-4 text-slate-500" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-900">
+                                {row.outletName}
+                              </div>
+                              {row.isDepot && (
+                                <div className="text-xs text-slate-400">Depot</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+                              {flaggedCount} flagged item{flaggedCount === 1 ? '' : 's'}
+                            </span>
+                            <ChevronRight className="h-4 w-4 text-slate-400" />
+                          </div>
+                        </Link>
+                      </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </div>
+          ) : (
+            <EmptyState title="No coverage data yet" />
+          )}
+        </Card>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card

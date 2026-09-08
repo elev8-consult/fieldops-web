@@ -26,7 +26,7 @@ export function TopBar() {
     if (path.startsWith('/review/')) return 'Review Report';
     if (path.startsWith('/reports/merchandiser/')) return 'Merchandiser Report';
     if (path.startsWith('/reports/promoter/')) return 'Promoter Report';
-    return 'FieldOps';
+    return 'I Prom';
   }, [location.pathname]);
 
   return (
