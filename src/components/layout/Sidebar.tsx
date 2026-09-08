@@ -36,10 +36,11 @@ export function Sidebar() {
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const hasRole = useAuthStore((s) => s.hasRole);
 
-  const brandIdForCount =
-    user?.role === ROLES.BRAND_MANAGER ? user.brandId ?? undefined : undefined;
-  const showAdmin =
-    hasRole(ROLES.SUPER_ADMIN) || hasRole(ROLES.BRAND_MANAGER);
+  const isBrandManager = user?.role === ROLES.BRAND_MANAGER;
+  const brandIdForCount = isBrandManager ? user.brandId ?? undefined : undefined;
+  // Brand managers are, for now, limited to Dashboard + Stock Dashboard —
+  // everything else (including all of Admin) stays hidden from their nav.
+  const showAdmin = hasRole(ROLES.SUPER_ADMIN);
   const { data: flaggedCount = 0 } = useReviewFlaggedCount(brandIdForCount);
   const { data: unknownSendersCount = 0 } =
     useUnknownSenderUnresolvedCount(showAdmin);
@@ -70,33 +71,38 @@ export function Sidebar() {
           <LayoutGrid className="h-5 w-5 shrink-0" />
           Stock Dashboard
         </NavLink>
-        <NavLink to="/dashboard/promoter" className={navClass}>
-          <LayoutGrid className="h-5 w-5 shrink-0" />
-          Promoter Dashboard
-        </NavLink>
-        <NavLink to="/review" className={navClass}>
-          <ClipboardCheck className="h-5 w-5 shrink-0" />
-          <span className="flex flex-1 items-center justify-between gap-2">
-            Review Queue
-            {flaggedCount > 0 && (
-              <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
-                {flaggedCount > 99 ? '99+' : flaggedCount}
+
+        {!isBrandManager && (
+          <>
+            <NavLink to="/dashboard/promoter" className={navClass}>
+              <LayoutGrid className="h-5 w-5 shrink-0" />
+              Promoter Dashboard
+            </NavLink>
+            <NavLink to="/review" className={navClass}>
+              <ClipboardCheck className="h-5 w-5 shrink-0" />
+              <span className="flex flex-1 items-center justify-between gap-2">
+                Review Queue
+                {flaggedCount > 0 && (
+                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
+                    {flaggedCount > 99 ? '99+' : flaggedCount}
+                  </span>
+                )}
               </span>
-            )}
-          </span>
-        </NavLink>
-        <NavLink to="/messages" className={navClass}>
-          <MessageSquare className="h-5 w-5 shrink-0" />
-          Messages
-        </NavLink>
-        <NavLink to="/reports/merchandiser" className={navClass}>
-          <Package className="h-5 w-5 shrink-0" />
-          Merchandiser
-        </NavLink>
-        <NavLink to="/reports/promoter" className={navClass}>
-          <Users className="h-5 w-5 shrink-0" />
-          Promoter
-        </NavLink>
+            </NavLink>
+            <NavLink to="/messages" className={navClass}>
+              <MessageSquare className="h-5 w-5 shrink-0" />
+              Messages
+            </NavLink>
+            <NavLink to="/reports/merchandiser" className={navClass}>
+              <Package className="h-5 w-5 shrink-0" />
+              Merchandiser
+            </NavLink>
+            <NavLink to="/reports/promoter" className={navClass}>
+              <Users className="h-5 w-5 shrink-0" />
+              Promoter
+            </NavLink>
+          </>
+        )}
 
         {showAdmin && (
           <>

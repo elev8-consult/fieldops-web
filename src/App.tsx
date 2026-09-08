@@ -67,19 +67,18 @@ function SuperAdminOnly({ children }: { children: ReactNode }) {
   return children;
 }
 
-function BrandManagerPlus({ children }: { children: ReactNode }) {
-  const ok = useAuthStore((s) =>
-    s.hasRole('super_admin', 'brand_manager'),
-  );
+function DashboardPromoterRoles({ children }: { children: ReactNode }) {
+  const ok = useAuthStore((s) => s.hasRole('super_admin', 'supervisor'));
   if (!ok) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
-function DashboardPromoterRoles({ children }: { children: ReactNode }) {
-  const ok = useAuthStore((s) =>
-    s.hasRole('super_admin', 'brand_manager', 'supervisor'),
+// Brand managers are, for now, limited to Dashboard + Stock Dashboard only.
+function BlockBrandManager({ children }: { children: ReactNode }) {
+  const isBrandManager = useAuthStore(
+    (s) => s.user?.role === 'brand_manager',
   );
-  if (!ok) return <Navigate to="/dashboard" replace />;
+  if (isBrandManager) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -98,10 +97,21 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: 'dashboard', element: <Dashboard /> },
-          { path: 'review', element: <ReviewQueue /> },
+          {
+            path: 'review',
+            element: (
+              <BlockBrandManager>
+                <ReviewQueue />
+              </BlockBrandManager>
+            ),
+          },
           {
             path: 'review/:id',
-            element: <ReviewDetail />,
+            element: (
+              <BlockBrandManager>
+                <ReviewDetail />
+              </BlockBrandManager>
+            ),
             errorElement: (
               <div className="min-h-screen bg-slate-50 flex items-center justify-center">
                 <div className="text-center">
@@ -119,7 +129,14 @@ export const router = createBrowserRouter([
               </div>
             ),
           },
-          { path: 'messages', element: <MessageLog /> },
+          {
+            path: 'messages',
+            element: (
+              <BlockBrandManager>
+                <MessageLog />
+              </BlockBrandManager>
+            ),
+          },
           {
             path: 'dashboard/merchandiser',
             element: <MerchandiserDashboard />,
@@ -134,26 +151,42 @@ export const router = createBrowserRouter([
           },
           {
             path: 'reports/merchandiser',
-            element: <MerchandiserReports />,
+            element: (
+              <BlockBrandManager>
+                <MerchandiserReports />
+              </BlockBrandManager>
+            ),
           },
           {
             path: 'reports/merchandiser/:id',
-            element: <MerchandiserReportDetail />,
+            element: (
+              <BlockBrandManager>
+                <MerchandiserReportDetail />
+              </BlockBrandManager>
+            ),
           },
           {
             path: 'reports/promoter',
-            element: <PromoterReports />,
+            element: (
+              <BlockBrandManager>
+                <PromoterReports />
+              </BlockBrandManager>
+            ),
           },
           {
             path: 'reports/promoter/:id',
-            element: <PromoterReportDetail />,
+            element: (
+              <BlockBrandManager>
+                <PromoterReportDetail />
+              </BlockBrandManager>
+            ),
           },
           {
             path: 'admin/brands',
             element: (
-              <BrandManagerPlus>
+              <SuperAdminOnly>
                 <Brands />
-              </BrandManagerPlus>
+              </SuperAdminOnly>
             ),
           },
           {
@@ -167,41 +200,41 @@ export const router = createBrowserRouter([
           {
             path: 'admin/unknown-senders',
             element: (
-              <BrandManagerPlus>
+              <SuperAdminOnly>
                 <UnknownSenders />
-              </BrandManagerPlus>
+              </SuperAdminOnly>
             ),
           },
           {
             path: 'admin/outlets',
             element: (
-              <BrandManagerPlus>
+              <SuperAdminOnly>
                 <Outlets />
-              </BrandManagerPlus>
+              </SuperAdminOnly>
             ),
           },
           {
             path: 'admin/products',
             element: (
-              <BrandManagerPlus>
+              <SuperAdminOnly>
                 <Products />
-              </BrandManagerPlus>
+              </SuperAdminOnly>
             ),
           },
           {
             path: 'admin/catalog-import',
             element: (
-              <BrandManagerPlus>
+              <SuperAdminOnly>
                 <CatalogImport />
-              </BrandManagerPlus>
+              </SuperAdminOnly>
             ),
           },
           {
             path: 'admin/app-users',
             element: (
-              <BrandManagerPlus>
+              <SuperAdminOnly>
                 <AppUsers />
-              </BrandManagerPlus>
+              </SuperAdminOnly>
             ),
           },
         ],
