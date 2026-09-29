@@ -1,5 +1,12 @@
 import { fetchBrands } from '@/api/brands';
-import { createUser, deleteUser, fetchUsers, updateUser } from '@/api/users';
+import {
+  clearLoginCode,
+  createUser,
+  deleteUser,
+  fetchUsers,
+  generateLoginCode,
+  updateUser,
+} from '@/api/users';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -13,7 +20,14 @@ import { useUiStore } from '@/store/ui.store';
 import type { User } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Pencil, Plus, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Copy,
+  KeyRound,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -27,15 +41,48 @@ const roleEnum = z.enum([
   'merchandiser',
 ]);
 
-const createSchema = z.object({
-  fullName: z.string().min(1, 'Required'),
-  whatsappPhone: z.string().optional(),
-  email: z.string().email(),
-  password: z.string().min(8, 'Min 8 characters'),
-  role: roleEnum,
-  brandId: z.string().optional(),
-  isActive: z.boolean(),
-});
+const MOBILE_ROLES = ['merchandiser', 'promoter'];
+const isMobileRole = (role: string) => MOBILE_ROLES.includes(role);
+
+const createSchema = z
+  .object({
+    fullName: z.string().min(1, 'Required'),
+    whatsappPhone: z.string().optional(),
+    email: z.string().email().or(z.literal('')),
+    password: z.string(),
+    role: roleEnum,
+    brandId: z.string().optional(),
+    isActive: z.boolean(),
+  })
+  .superRefine((v, ctx) => {
+    if (isMobileRole(v.role)) {
+      if (!v.whatsappPhone?.trim()) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['whatsappPhone'],
+          message: 'Required for app users',
+        });
+      }
+      if (v.password && v.password.length < 8) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['password'],
+          message: 'Min 8 characters if set',
+        });
+      }
+      return;
+    }
+    if (!v.email) {
+      ctx.addIssue({ code: 'custom', path: ['email'], message: 'Required' });
+    }
+    if (v.password.length < 8) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['password'],
+        message: 'Min 8 characters',
+      });
+    }
+  });
 
 const editSchema = z.object({
   fullName: z.string().min(1, 'Required'),
@@ -101,6 +148,11 @@ export function Users() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [codeTarget, setCodeTarget] = useState<User | null>(null);
+  const [issuedCode, setIssuedCode] = useState<{
+    user: User;
+    code: string;
+  } | null>(null);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -134,14 +186,49 @@ export function Users() {
   });
 
   const createM = useMutation({
-    mutationFn: (body: Parameters<typeof createUser>[0]) => createUser(body),
-    onSuccess: async () => {
+    mutationFn: async (body: Parameters<typeof createUser>[0]) => {
+      const user = await createUser(body);
+      if (!isMobileRole(user.role)) return { user, code: null };
+      try {
+        return { user, code: await generateLoginCode(user.id) };
+      } catch {
+        return { user, code: null };
+      }
+    },
+    onSuccess: async ({ user, code }) => {
       addToast('success', 'User created');
       setModalOpen(false);
       createForm.reset();
+      if (code) setIssuedCode({ user, code });
+      else if (isMobileRole(user.role)) {
+        addToast('error', 'User created, but the login code failed. Use the key button to retry.');
+      }
       await qc.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (e: Error) => addToast('error', e.message || 'Create failed'),
+  });
+
+  const codeM = useMutation({
+    mutationFn: async (user: User) => ({
+      user,
+      code: await generateLoginCode(user.id),
+    }),
+    onSuccess: async (res) => {
+      setCodeTarget(null);
+      setIssuedCode(res);
+      await qc.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (e: Error) =>
+      addToast('error', e.message || 'Could not generate code'),
+  });
+
+  const clearCodeM = useMutation({
+    mutationFn: (user: User) => clearLoginCode(user.id),
+    onSuccess: async () => {
+      addToast('success', 'Login code removed');
+      await qc.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (e: Error) => addToast('error', e.message || 'Could not remove code'),
   });
 
   const updateM = useMutation({
@@ -232,6 +319,18 @@ export function Users() {
         render: (row) => brandName(row.brandId),
       },
       {
+        key: 'loginCode',
+        header: 'App code',
+        render: (row) =>
+          !isMobileRole(row.role) ? (
+            '—'
+          ) : row.hasLoginCode ? (
+            <span className="text-emerald-600">Set</span>
+          ) : (
+            <span className="text-slate-400">Not set</span>
+          ),
+      },
+      {
         key: 'status',
         header: 'Status',
         render: (row) => (
@@ -245,6 +344,16 @@ export function Users() {
         header: '',
         render: (row) => (
           <div className="flex gap-1">
+            {isMobileRole(row.role) && (
+              <button
+                type="button"
+                title="App login code"
+                className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"
+                onClick={() => setCodeTarget(row)}
+              >
+                <KeyRound className="h-4 w-4" />
+              </button>
+            )}
             <button
               type="button"
               className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"
@@ -296,8 +405,8 @@ export function Users() {
     createM.mutate({
       fullName: vals.fullName,
       whatsappPhone: vals.whatsappPhone || undefined,
-      email: vals.email,
-      password: vals.password,
+      email: vals.email || undefined,
+      password: vals.password || undefined,
       role: vals.role,
       brandId: vals.brandId || null,
     });
@@ -341,6 +450,7 @@ export function Users() {
   }
 
   const brands = brandsQ.data ?? [];
+  const createIsMobile = isMobileRole(createForm.watch('role'));
 
   return (
     <div className="space-y-6">
@@ -470,16 +580,17 @@ export function Users() {
             <Input
               label="WhatsApp phone"
               {...createForm.register('whatsappPhone')}
+              error={createForm.formState.errors.whatsappPhone?.message}
             />
             <Input
-              label="Email"
+              label={createIsMobile ? 'Email (optional)' : 'Email'}
               type="email"
               autoComplete="email"
               {...createForm.register('email')}
               error={createForm.formState.errors.email?.message}
             />
             <Input
-              label="Password"
+              label={createIsMobile ? 'Password (optional)' : 'Password'}
               type="password"
               autoComplete="new-password"
               {...createForm.register('password')}
@@ -516,6 +627,79 @@ export function Users() {
               )}
             />
           </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(codeTarget)}
+        onClose={() => setCodeTarget(null)}
+        title="App login code"
+        footer={
+          <>
+            {codeTarget?.hasLoginCode && (
+              <Button
+                variant="secondary"
+                loading={clearCodeM.isPending}
+                onClick={() => {
+                  if (!codeTarget) return;
+                  clearCodeM.mutate(codeTarget, {
+                    onSuccess: () => setCodeTarget(null),
+                  });
+                }}
+              >
+                Remove code
+              </Button>
+            )}
+            <Button
+              loading={codeM.isPending}
+              onClick={() => codeTarget && codeM.mutate(codeTarget)}
+            >
+              {codeTarget?.hasLoginCode ? 'Generate new code' : 'Generate code'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">
+          {codeTarget?.hasLoginCode
+            ? `${codeTarget.fullName} already has a code. Generating a new one replaces it, and the old code stops working. Removing it switches them to WhatsApp codes.`
+            : `Generate a permanent 6-digit code ${codeTarget?.fullName ?? ''} will use to sign in to the app.`}
+        </p>
+      </Modal>
+
+      <Modal
+        open={Boolean(issuedCode)}
+        onClose={() => setIssuedCode(null)}
+        title="Login code"
+        footer={<Button onClick={() => setIssuedCode(null)}>Done</Button>}
+      >
+        {issuedCode && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Give this to {issuedCode.user.fullName}. They sign in with their
+              phone number ({issuedCode.user.whatsappPhone ?? '—'}), tap
+              &quot;Send code&quot;, then enter this code.
+            </p>
+            <div className="flex items-center justify-center gap-3 rounded-xl bg-slate-50 py-5">
+              <span className="font-mono text-4xl font-bold tracking-[0.3em] text-slate-900">
+                {issuedCode.code}
+              </span>
+              <button
+                type="button"
+                title="Copy"
+                className="rounded-lg p-2 text-slate-600 hover:bg-slate-200"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(issuedCode.code);
+                  addToast('success', 'Code copied');
+                }}
+              >
+                <Copy className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-xs text-amber-700">
+              This code won&apos;t be shown again. If it&apos;s lost, generate a
+              new one.
+            </p>
+          </div>
         )}
       </Modal>
 

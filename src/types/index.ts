@@ -47,6 +47,7 @@ export interface User {
   role: UserRole;
   brandId: string | null;
   isActive: boolean;
+  hasLoginCode: boolean;
   createdAt: string;
   updatedAt: string;
 }

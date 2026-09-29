@@ -53,6 +53,16 @@ export async function deleteUser(id: string): Promise<void> {
   await api.delete(`/users/${id}`);
 }
 
+/** Issue a new permanent mobile login code. The plain code is returned once. */
+export async function generateLoginCode(id: string): Promise<string> {
+  const { data } = await api.post<{ code: string }>(`/users/${id}/login-code`);
+  return data.code;
+}
+
+export async function clearLoginCode(id: string): Promise<void> {
+  await api.delete(`/users/${id}/login-code`);
+}
+
 /** Outlet ids a mobile user is assigned to. */
 export async function fetchUserOutlets(id: string): Promise<string[]> {
   const { data } = await api.get<string[]>(`/users/${id}/outlets`);

@@ -27,6 +27,7 @@ export function normalizeUser(raw: Record<string, unknown>): User {
     whatsappPhone:
       raw.whatsappPhone != null ? String(raw.whatsappPhone) : null,
     isActive: Boolean(raw.isActive ?? true),
+    hasLoginCode: raw.loginCodeSetAt != null,
     createdAt: String(raw.createdAt ?? ''),
     updatedAt: String(raw.updatedAt ?? ''),
   };
