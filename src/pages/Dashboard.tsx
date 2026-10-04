@@ -39,12 +39,24 @@ export function Dashboard() {
   const navigate = useNavigate();
   const isBrandManager = user?.role === 'brand_manager';
   const brandId = isBrandManager ? user.brandId ?? undefined : undefined;
+  // The analytics endpoints only allow these roles; others would get 403s.
+  const canSeeAnalytics =
+    user?.role === 'super_admin' || user?.role === 'brand_manager';
+  // Brand managers are blocked from the review pages.
+  const canSeeReview = !isBrandManager;
 
-  const todayStart = startOfDay(new Date()).toISOString();
-  const todayEnd = endOfDay(new Date()).toISOString();
-  const from14 = subDays(new Date(), 14).toISOString();
-  const from30 = format(subDays(new Date(), 30), 'yyyy-MM-dd');
-  const todayShort = format(new Date(), 'yyyy-MM-dd');
+  // Computed once per day: query keys must not change on every render.
+  const dayKey = format(new Date(), 'yyyy-MM-dd');
+  const { todayStart, todayEnd, from14, from30, todayShort } = useMemo(() => {
+    const now = new Date();
+    return {
+      todayStart: startOfDay(now).toISOString(),
+      todayEnd: endOfDay(now).toISOString(),
+      from14: startOfDay(subDays(now, 14)).toISOString(),
+      from30: format(subDays(now, 30), 'yyyy-MM-dd'),
+      todayShort: format(now, 'yyyy-MM-dd'),
+    };
+  }, [dayKey]);
 
   const brandQ = useQuery({
     queryKey: ['brand', brandId],
@@ -59,25 +71,21 @@ export function Dashboard() {
     date_to: todayShort,
   });
 
-  const summaryQ = useAnalyticsSummary({
-    brand_id: brandId,
-    from: todayStart,
-    to: todayEnd,
-  });
-  const summaryAllQ = useAnalyticsSummary({ brand_id: brandId });
-  const flaggedQ = useFlaggedRate(brandId);
-  const byDayQ = useReportsByDay({
-    brand_id: brandId,
-    from: from14,
-    to: todayEnd,
-  });
-  const topProdQ = useTopFlaggedProducts(brandId, 10);
-  const recentFlaggedQ = useReviewQueue({
-    status: 'flagged',
-    brand_id: brandId,
-    page: 1,
-    limit: 5,
-  });
+  const summaryQ = useAnalyticsSummary(
+    { brand_id: brandId, from: todayStart, to: todayEnd },
+    canSeeAnalytics,
+  );
+  const summaryAllQ = useAnalyticsSummary({ brand_id: brandId }, canSeeAnalytics);
+  const flaggedQ = useFlaggedRate(brandId, canSeeAnalytics);
+  const byDayQ = useReportsByDay(
+    { brand_id: brandId, from: from14, to: todayEnd },
+    canSeeAnalytics,
+  );
+  const topProdQ = useTopFlaggedProducts(brandId, 10, canSeeAnalytics);
+  const recentFlaggedQ = useReviewQueue(
+    { status: 'flagged', brand_id: brandId, page: 1, limit: 5 },
+    canSeeReview,
+  );
 
   const summaryResponse = summaryQ.data as unknown;
   const summary = Array.isArray(summaryResponse)
@@ -189,7 +197,11 @@ export function Dashboard() {
     recentFlaggedQ.isError
   ) {
     const err =
-      summaryQ.error ?? flaggedQ.error ?? byDayQ.error ?? topProdQ.error;
+      summaryQ.error ??
+      flaggedQ.error ??
+      byDayQ.error ??
+      topProdQ.error ??
+      recentFlaggedQ.error;
     return (
       <div className="rounded-xl border border-red-200 bg-red-50 p-6">
         <div className="flex items-start gap-3">
@@ -202,11 +214,9 @@ export function Dashboard() {
             <Button
               className="mt-4"
               onClick={() => {
-                summaryQ.refetch();
-                flaggedQ.refetch();
-                byDayQ.refetch();
-                topProdQ.refetch();
-                recentFlaggedQ.refetch();
+                for (const q of [summaryQ, flaggedQ, byDayQ, topProdQ, recentFlaggedQ]) {
+                  if (q.isError) q.refetch();
+                }
               }}
             >
               Retry
@@ -247,12 +257,9 @@ export function Dashboard() {
         </p>
       </div>
 
+      {canSeeAnalytics && (
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <button
-          type="button"
-          onClick={() => {}}
-          className="rounded-xl border border-slate-100 bg-white p-6 text-left shadow-sm transition hover:shadow"
-        >
+        <div className="rounded-xl border border-slate-100 bg-white p-6 text-left shadow-sm">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50">
             <FileText className="h-5 w-5 text-indigo-600" />
           </div>
@@ -260,11 +267,12 @@ export function Dashboard() {
             {totalToday}
           </div>
           <p className="text-sm text-slate-500">reports processed today</p>
-        </button>
+        </div>
         <button
           type="button"
+          disabled={!canSeeReview}
           onClick={() => navigate('/review')}
-          className="rounded-xl border border-slate-100 bg-white p-6 text-left shadow-sm transition hover:shadow"
+          className="rounded-xl border border-slate-100 bg-white p-6 text-left shadow-sm transition enabled:hover:shadow disabled:cursor-default"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
             <AlertTriangle className="h-5 w-5 text-amber-600" />
@@ -294,6 +302,7 @@ export function Dashboard() {
           <p className="text-sm text-slate-500">auto-parsed rate</p>
         </div>
       </div>
+      )}
 
       {isBrandManager && brandId ? (
         <Card
@@ -373,6 +382,7 @@ export function Dashboard() {
         </Card>
       ) : null}
 
+      {canSeeAnalytics && (
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card
           title="Reports Over Time"
@@ -391,8 +401,10 @@ export function Dashboard() {
           />
         </Card>
       </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {canSeeReview && (
         <Card
           title="Needs Review"
           action={
@@ -436,6 +448,8 @@ export function Dashboard() {
             </ul>
           )}
         </Card>
+        )}
+        {canSeeAnalytics && (
         <Card
           title="Unrecognized Products"
           subtitle="Products not matched to catalog"
@@ -446,6 +460,7 @@ export function Dashboard() {
             loading={topProdQ.isLoading}
           />
         </Card>
+        )}
       </div>
     </div>
   );

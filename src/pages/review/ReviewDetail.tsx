@@ -320,7 +320,7 @@ export function ReviewDetail() {
                   )}
                   <div className="space-y-2">
                     {(Array.isArray(pr.reportData?.questionsAnswers)
-                      ? pr.reportData?.questionsAnswers
+                      ? pr.reportData.questionsAnswers
                       : []
                     ).map((qa, i) => (
                       <details key={i} className="rounded-lg border border-slate-100">

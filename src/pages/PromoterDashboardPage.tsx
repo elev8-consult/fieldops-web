@@ -1,4 +1,3 @@
-import { api } from '@/api/axios';
 import { fetchBrands } from '@/api/brands';
 import {
   exportPromoterDashboard,
@@ -7,6 +6,7 @@ import {
   type PromoterDashboardProduct,
 } from '@/api/promoterDashboardApi';
 import { fetchProducts } from '@/api/products';
+import { reviewApi } from '@/api/review';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -27,6 +27,20 @@ const statusDotClass: Record<string, string> = {
   approved: 'bg-emerald-500',
   rejected: 'bg-rose-500',
 };
+
+type ReviewItem = {
+  id: string;
+  productNameRaw: string | null;
+  isProductMatched: boolean;
+  isOffer?: boolean;
+};
+
+/** Must mirror how the API builds promoter dashboard column keys for sales. */
+function columnKeyForSale(raw: string, isOffer: boolean) {
+  return isOffer && !raw.toLowerCase().startsWith('offer')
+    ? `Offer 20% ${raw}`
+    : raw;
+}
 
 function formatDate(value: string) {
   const d = new Date(value);
@@ -88,15 +102,58 @@ export function PromoterDashboardPage() {
     staleTime: 20_000,
   });
 
-  const patchMatchMutation = useMutation({
-    mutationFn: async (args: { itemId: string; productId: string }) => {
-      await api.patch(`/reports/promoter/items/${args.itemId}`, {
-        product_id: args.productId,
-      });
+  const matchMutation = useMutation({
+    mutationFn: async (args: {
+      column: PromoterDashboardProduct;
+      reportIds: string[];
+      productId: string;
+    }) => {
+      let matched = 0;
+      for (const reportId of args.reportIds) {
+        const report = (await reviewApi.getReport(reportId)) as unknown as {
+          reportData?: { sales?: ReviewItem[]; samples?: ReviewItem[] } | null;
+        };
+        const lines: Array<{ item: ReviewItem; reportType: 'promoter_sale' | 'promoter_sample' }> =
+          args.column.is_gift
+            ? (report.reportData?.samples ?? []).map((item) => ({
+                item,
+                reportType: 'promoter_sample' as const,
+              }))
+            : (report.reportData?.sales ?? []).map((item) => ({
+                item,
+                reportType: 'promoter_sale' as const,
+              }));
+        for (const { item, reportType } of lines) {
+          const raw = (item.productNameRaw ?? '').trim();
+          if (!raw || item.isProductMatched) continue;
+          const key =
+            reportType === 'promoter_sale'
+              ? columnKeyForSale(raw, Boolean(item.isOffer))
+              : raw;
+          if (key !== args.column.key) continue;
+          await reviewApi.acceptMatch(item.id, {
+            productId: args.productId,
+            rawName: raw,
+            reportType,
+          });
+          matched += 1;
+        }
+      }
+      return matched;
     },
-    onSuccess: async () => {
+    onSuccess: async (matched) => {
       await dashboardQ.refetch();
-      addToast('success', 'Product matched successfully');
+      if (matched === 0) {
+        addToast('error', 'No unmatched lines found for this column');
+        return;
+      }
+      addToast(
+        'success',
+        `Matched ${matched} line${matched === 1 ? '' : 's'}. Future reports with this name will match automatically.`,
+      );
+      setEditingProduct(null);
+      setProductSearch('');
+      setDebouncedSearch('');
     },
     onError: (error) => {
       addToast('error', getAxiosMessage(error));
@@ -132,32 +189,31 @@ export function PromoterDashboardPage() {
     setDebouncedSearch(product.label);
   };
 
-  const unmatchedItemIds = useMemo(() => {
+  const affectedReportIds = useMemo(() => {
     if (!editingProduct || !dashboardQ.data) return [];
     const ids = new Set<string>();
     for (const row of dashboardQ.data.rows) {
       for (const date of dashboardQ.data.dates) {
         const cell = row.days[date]?.[editingProduct.key] as
-          | (PromoterDashboardCell & { item_id?: string | null })
+          | PromoterDashboardCell
           | undefined;
-        if (cell?.item_id) ids.add(cell.item_id);
+        if (cell?.parsed_report_id) ids.add(cell.parsed_report_id);
       }
     }
     return Array.from(ids);
   }, [editingProduct, dashboardQ.data]);
 
-  const onSelectMatchProduct = async (productId: string) => {
-    if (unmatchedItemIds.length === 0) {
-      addToast('error', 'No item IDs available in this dataset for patching');
+  const onSelectMatchProduct = (productId: string) => {
+    if (!editingProduct) return;
+    if (affectedReportIds.length === 0) {
+      addToast('error', 'No reports found for this column');
       return;
     }
-    for (const itemId of unmatchedItemIds) {
-      // sequential to avoid overwhelming API if many items
-      await patchMatchMutation.mutateAsync({ itemId, productId });
-    }
-    setEditingProduct(null);
-    setProductSearch('');
-    setDebouncedSearch('');
+    matchMutation.mutate({
+      column: editingProduct,
+      reportIds: affectedReportIds,
+      productId,
+    });
   };
 
   return (
@@ -469,8 +525,11 @@ export function PromoterDashboardPage() {
               Current raw name: <span className="font-medium">{editingProduct.label}</span>
             </p>
             <p className="text-xs text-slate-500">
-              Affected unmatched item IDs found: {unmatchedItemIds.length}
+              Reports containing this name: {affectedReportIds.length}
             </p>
+            {matchMutation.isPending && (
+              <p className="mt-1 text-xs font-medium text-indigo-600">Matching…</p>
+            )}
 
             <div className="mt-3 max-h-72 space-y-2 overflow-auto">
               {productSearchQ.isFetching ? (
@@ -482,7 +541,7 @@ export function PromoterDashboardPage() {
                   <button
                     key={product.id}
                     type="button"
-                    disabled={patchMatchMutation.isPending}
+                    disabled={matchMutation.isPending}
                     onClick={() => onSelectMatchProduct(product.id)}
                     className="w-full rounded-lg border border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-50 disabled:opacity-50"
                   >

@@ -23,7 +23,12 @@ import { useAuthStore } from '@/store/auth.store';
 import { useUiStore } from '@/store/ui.store';
 import type { Product, ProductAlias } from '@/types';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import {
   AlertTriangle,
   ChevronDown,
@@ -95,6 +100,7 @@ export function Products() {
         brand_id: effectiveBrand,
         search: search || undefined,
       }),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
     retry: 2,
     refetchOnWindowFocus: false,

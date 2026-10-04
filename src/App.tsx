@@ -1,29 +1,53 @@
 import { AppLayout } from '@/components/layout/AppLayout';
-import { AppUsers } from '@/pages/admin/AppUsers';
-import { Brands } from '@/pages/admin/Brands';
-import { CatalogImport } from '@/pages/admin/CatalogImport';
-import { Outlets } from '@/pages/admin/Outlets';
-import { Products } from '@/pages/admin/Products';
-import { UnknownSenders } from '@/pages/admin/UnknownSenders';
-import { Users } from '@/pages/admin/Users';
-import { Dashboard } from '@/pages/Dashboard';
-import { MerchandiserDashboard } from '@/pages/dashboard/MerchandiserDashboard';
 import { Landing } from '@/pages/Landing';
 import { Privacy } from '@/pages/Privacy';
 import { Login } from '@/pages/Login';
-import { MessageLog } from '@/pages/messages/MessageLog';
-import { PromoterDashboardPage } from '@/pages/PromoterDashboardPage';
-import { MerchandiserReportDetail } from '@/pages/reports/MerchandiserReportDetail';
-import { MerchandiserReports } from '@/pages/reports/MerchandiserReports';
-import { PromoterReportDetail } from '@/pages/reports/PromoterReportDetail';
-import { PromoterReports } from '@/pages/reports/PromoterReports';
-import { ReviewDetail } from '@/pages/review/ReviewDetail';
-import { ReviewQueue } from '@/pages/review/ReviewQueue';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { ToastContainer } from '@/components/ui/ToastContainer';
 import { useAuthStore } from '@/store/auth.store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { lazy, type ComponentType, type ReactNode } from 'react';
+
+const CHUNK_RELOAD_KEY = 'fieldops_chunk_reload';
+
+/**
+ * Load a page on demand. After a deploy, an open tab may request a chunk
+ * that no longer exists; reload once to pick up the new build.
+ */
+function lazyPage<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
+  return lazy(() =>
+    load()
+      .then((m) => {
+        sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+        return { default: pick(m) };
+      })
+      .catch((err) => {
+        if (!sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
+          sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+          window.location.reload();
+        }
+        throw err;
+      }),
+  );
+}
+
+const AppUsers = lazyPage(() => import('@/pages/admin/AppUsers'), (m) => m.AppUsers);
+const Brands = lazyPage(() => import('@/pages/admin/Brands'), (m) => m.Brands);
+const CatalogImport = lazyPage(() => import('@/pages/admin/CatalogImport'), (m) => m.CatalogImport);
+const Outlets = lazyPage(() => import('@/pages/admin/Outlets'), (m) => m.Outlets);
+const Products = lazyPage(() => import('@/pages/admin/Products'), (m) => m.Products);
+const UnknownSenders = lazyPage(() => import('@/pages/admin/UnknownSenders'), (m) => m.UnknownSenders);
+const Users = lazyPage(() => import('@/pages/admin/Users'), (m) => m.Users);
+const Dashboard = lazyPage(() => import('@/pages/Dashboard'), (m) => m.Dashboard);
+const MerchandiserDashboard = lazyPage(() => import('@/pages/dashboard/MerchandiserDashboard'), (m) => m.MerchandiserDashboard);
+const MessageLog = lazyPage(() => import('@/pages/messages/MessageLog'), (m) => m.MessageLog);
+const PromoterDashboardPage = lazyPage(() => import('@/pages/PromoterDashboardPage'), (m) => m.PromoterDashboardPage);
+const MerchandiserReportDetail = lazyPage(() => import('@/pages/reports/MerchandiserReportDetail'), (m) => m.MerchandiserReportDetail);
+const MerchandiserReports = lazyPage(() => import('@/pages/reports/MerchandiserReports'), (m) => m.MerchandiserReports);
+const PromoterReportDetail = lazyPage(() => import('@/pages/reports/PromoterReportDetail'), (m) => m.PromoterReportDetail);
+const PromoterReports = lazyPage(() => import('@/pages/reports/PromoterReports'), (m) => m.PromoterReports);
+const ReviewDetail = lazyPage(() => import('@/pages/review/ReviewDetail'), (m) => m.ReviewDetail);
+const ReviewQueue = lazyPage(() => import('@/pages/review/ReviewQueue'), (m) => m.ReviewQueue);
 import {
   createBrowserRouter,
   Navigate,

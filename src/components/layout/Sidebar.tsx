@@ -22,6 +22,9 @@ import {
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
+/** The API has no /unknown-senders endpoints yet; flip once they exist. */
+const UNKNOWN_SENDERS_ENABLED = false;
+
 const navClass = ({ isActive }: { isActive: boolean }) =>
   [
     'mx-3 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
@@ -42,8 +45,9 @@ export function Sidebar() {
   // everything else (including all of Admin) stays hidden from their nav.
   const showAdmin = hasRole(ROLES.SUPER_ADMIN);
   const { data: flaggedCount = 0 } = useReviewFlaggedCount(brandIdForCount);
-  const { data: unknownSendersCount = 0 } =
-    useUnknownSenderUnresolvedCount(showAdmin);
+  const { data: unknownSendersCount = 0 } = useUnknownSenderUnresolvedCount(
+    showAdmin && UNKNOWN_SENDERS_ENABLED,
+  );
 
   return (
     <aside className="flex w-64 shrink-0 flex-col bg-slate-900">
@@ -136,17 +140,19 @@ export function Sidebar() {
               <Smartphone className="h-5 w-5 shrink-0" />
               App Users
             </NavLink>
-            <NavLink to="/admin/unknown-senders" className={navClass}>
-              <UserRoundX className="h-5 w-5 shrink-0" />
-              <span className="flex flex-1 items-center justify-between gap-2">
-                Unknown Senders
-                {unknownSendersCount > 0 && (
-                  <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white">
-                    {unknownSendersCount > 99 ? '99+' : unknownSendersCount}
-                  </span>
-                )}
-              </span>
-            </NavLink>
+            {UNKNOWN_SENDERS_ENABLED && (
+              <NavLink to="/admin/unknown-senders" className={navClass}>
+                <UserRoundX className="h-5 w-5 shrink-0" />
+                <span className="flex flex-1 items-center justify-between gap-2">
+                  Unknown Senders
+                  {unknownSendersCount > 0 && (
+                    <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white">
+                      {unknownSendersCount > 99 ? '99+' : unknownSendersCount}
+                    </span>
+                  )}
+                </span>
+              </NavLink>
+            )}
           </>
         )}
       </nav>

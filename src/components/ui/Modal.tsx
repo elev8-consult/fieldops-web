@@ -29,10 +29,15 @@ export function Modal({
 }: ModalProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  // Parents pass inline onClose handlers; reading it through a ref keeps the
+  // focus effect from re-running (and stealing focus) on every parent render.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
       if (e.key !== 'Tab' || !panelRef.current) return;
       const focusable = panelRef.current.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
@@ -51,16 +56,17 @@ export function Modal({
         first.focus();
       }
     },
-    [onClose],
+    [],
   );
 
   useEffect(() => {
     if (!open) return;
     document.addEventListener('keydown', handleKeyDown);
     const t = window.setTimeout(() => {
-      const el = panelRef.current?.querySelector<HTMLElement>(
-        'button, [href], input, select, textarea',
-      );
+      const selector = 'input, select, textarea, button, [href]';
+      const el =
+        bodyRef.current?.querySelector<HTMLElement>(selector) ??
+        panelRef.current?.querySelector<HTMLElement>(selector);
       el?.focus();
     }, 0);
     return () => {
@@ -104,7 +110,9 @@ export function Modal({
             <X className="h-5 w-5" />
           </Button>
         </div>
-        <div className="px-6 py-4">{children}</div>
+        <div ref={bodyRef} className="px-6 py-4">
+          {children}
+        </div>
         {footer && (
           <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
             {footer}

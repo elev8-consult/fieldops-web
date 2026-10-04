@@ -1,5 +1,7 @@
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TopBar } from '@/components/layout/TopBar';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 
 export function AppLayout() {
@@ -9,7 +11,16 @@ export function AppLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
         <main className="flex-1 overflow-y-auto bg-slate-50 p-6">
-          <Outlet />
+          <Suspense
+            fallback={
+              <div className="space-y-4">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton variant="card" />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

@@ -12,7 +12,12 @@ import {
 } from '@/api/reports';
 import { reviewKeys } from '@/hooks/reviewKeys';
 import { useUiStore } from '@/store/ui.store';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 export const reportKeys = {
   all: ['reports'] as const,
@@ -27,6 +32,7 @@ export function useMerchandiserReports(filters: ReportListParams) {
   return useQuery({
     queryKey: reportKeys.merchandiser(filters),
     queryFn: () => fetchMerchandiserReports(filters),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
     retry: 2,
     refetchOnWindowFocus: false,
@@ -48,6 +54,7 @@ export function usePromoterReports(filters: ReportListParams) {
   return useQuery({
     queryKey: reportKeys.promoter(filters),
     queryFn: () => fetchPromoterReports(filters),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
     retry: 2,
     refetchOnWindowFocus: false,

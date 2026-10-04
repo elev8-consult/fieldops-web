@@ -1,19 +1,29 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { reviewApi } from '../api/review'
 
-export function useReviewQueue(filters?: {
-  brand_id?:    string
-  report_type?: string
-  status?:      string
-  search?:      string
-  page?:        number
-  limit?:       number
-}) {
+export function useReviewQueue(
+  filters?: {
+    brand_id?:    string
+    report_type?: string
+    status?:      string
+    search?:      string
+    page?:        number
+    limit?:       number
+  },
+  enabled = true,
+) {
   return useQuery({
     queryKey:       ['review', 'queue', filters],
     queryFn:        () => reviewApi.getQueue(filters),
     staleTime:      15000,
     refetchInterval: 60000,
+    placeholderData: keepPreviousData,
+    enabled,
   })
 }
 
