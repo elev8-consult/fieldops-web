@@ -350,7 +350,10 @@ export function Landing() {
             </a>
           </div>
           <p className="text-xs text-slate-500">
-            © {new Date().getFullYear()} I.Prom Agency. All rights reserved.
+            © {new Date().getFullYear()} I.Prom Agency. All rights reserved.{' '}
+            <Link to="/privacy" className="underline hover:text-white">
+              Privacy
+            </Link>
           </p>
         </div>
       </footer>

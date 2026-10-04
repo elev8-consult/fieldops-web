@@ -9,6 +9,7 @@ import { Users } from '@/pages/admin/Users';
 import { Dashboard } from '@/pages/Dashboard';
 import { MerchandiserDashboard } from '@/pages/dashboard/MerchandiserDashboard';
 import { Landing } from '@/pages/Landing';
+import { Privacy } from '@/pages/Privacy';
 import { Login } from '@/pages/Login';
 import { MessageLog } from '@/pages/messages/MessageLog';
 import { PromoterDashboardPage } from '@/pages/PromoterDashboardPage';
@@ -88,6 +89,7 @@ export const router = createBrowserRouter([
   // under its own paths below (starting with /dashboard).
   { path: '/', element: <Landing /> },
   { path: '/login', element: <LoginGate /> },
+  { path: '/privacy', element: <Privacy /> },
   {
     // Pathless layout route: guards every child path below without
     // claiming "/" itself, so it never competes with the Landing route.
