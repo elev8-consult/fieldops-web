@@ -53,9 +53,15 @@ export async function deleteUser(id: string): Promise<void> {
   await api.delete(`/users/${id}`);
 }
 
-/** Issue a new permanent mobile login code. The plain code is returned once. */
-export async function generateLoginCode(id: string): Promise<string> {
-  const { data } = await api.post<{ code: string }>(`/users/${id}/login-code`);
+/**
+ * Set a permanent mobile login code. Pass `pin` to choose it (4–6 digits),
+ * omit it for a random 6-digit code. The plain code is returned once.
+ */
+export async function generateLoginCode(id: string, pin?: string): Promise<string> {
+  const { data } = await api.post<{ code: string }>(
+    `/users/${id}/login-code`,
+    pin ? { code: pin } : {},
+  );
   return data.code;
 }
 

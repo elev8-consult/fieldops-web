@@ -4,6 +4,7 @@ import {
   getPromoterDashboard,
   type PromoterDashboardCell,
   type PromoterDashboardProduct,
+  type PromoterUnmatchedItem,
 } from '@/api/promoterDashboardApi';
 import { fetchProducts } from '@/api/products';
 import { reviewApi } from '@/api/review';
@@ -27,20 +28,6 @@ const statusDotClass: Record<string, string> = {
   approved: 'bg-emerald-500',
   rejected: 'bg-rose-500',
 };
-
-type ReviewItem = {
-  id: string;
-  productNameRaw: string | null;
-  isProductMatched: boolean;
-  isOffer?: boolean;
-};
-
-/** Must mirror how the API builds promoter dashboard column keys for sales. */
-function columnKeyForSale(raw: string, isOffer: boolean) {
-  return isOffer && !raw.toLowerCase().startsWith('offer')
-    ? `Offer 20% ${raw}`
-    : raw;
-}
 
 function formatDate(value: string) {
   const d = new Date(value);
@@ -103,41 +90,15 @@ export function PromoterDashboardPage() {
   });
 
   const matchMutation = useMutation({
-    mutationFn: async (args: {
-      column: PromoterDashboardProduct;
-      reportIds: string[];
-      productId: string;
-    }) => {
+    mutationFn: async (args: { items: PromoterUnmatchedItem[]; productId: string }) => {
       let matched = 0;
-      for (const reportId of args.reportIds) {
-        const report = (await reviewApi.getReport(reportId)) as unknown as {
-          reportData?: { sales?: ReviewItem[]; samples?: ReviewItem[] } | null;
-        };
-        const lines: Array<{ item: ReviewItem; reportType: 'promoter_sale' | 'promoter_sample' }> =
-          args.column.is_gift
-            ? (report.reportData?.samples ?? []).map((item) => ({
-                item,
-                reportType: 'promoter_sample' as const,
-              }))
-            : (report.reportData?.sales ?? []).map((item) => ({
-                item,
-                reportType: 'promoter_sale' as const,
-              }));
-        for (const { item, reportType } of lines) {
-          const raw = (item.productNameRaw ?? '').trim();
-          if (!raw || item.isProductMatched) continue;
-          const key =
-            reportType === 'promoter_sale'
-              ? columnKeyForSale(raw, Boolean(item.isOffer))
-              : raw;
-          if (key !== args.column.key) continue;
-          await reviewApi.acceptMatch(item.id, {
-            productId: args.productId,
-            rawName: raw,
-            reportType,
-          });
-          matched += 1;
-        }
+      for (const item of args.items) {
+        await reviewApi.acceptMatch(item.id, {
+          productId: args.productId,
+          rawName: item.raw_name,
+          reportType: item.type,
+        });
+        matched += 1;
       }
       return matched;
     },
@@ -189,31 +150,27 @@ export function PromoterDashboardPage() {
     setDebouncedSearch(product.label);
   };
 
-  const affectedReportIds = useMemo(() => {
+  const unmatchedItems = useMemo(() => {
     if (!editingProduct || !dashboardQ.data) return [];
-    const ids = new Set<string>();
+    const byId = new Map<string, PromoterUnmatchedItem>();
     for (const row of dashboardQ.data.rows) {
       for (const date of dashboardQ.data.dates) {
         const cell = row.days[date]?.[editingProduct.key] as
           | PromoterDashboardCell
           | undefined;
-        if (cell?.parsed_report_id) ids.add(cell.parsed_report_id);
+        for (const item of cell?.unmatched_items ?? []) byId.set(item.id, item);
       }
     }
-    return Array.from(ids);
+    return Array.from(byId.values());
   }, [editingProduct, dashboardQ.data]);
 
   const onSelectMatchProduct = (productId: string) => {
     if (!editingProduct) return;
-    if (affectedReportIds.length === 0) {
-      addToast('error', 'No reports found for this column');
+    if (unmatchedItems.length === 0) {
+      addToast('error', 'No unmatched lines found for this column');
       return;
     }
-    matchMutation.mutate({
-      column: editingProduct,
-      reportIds: affectedReportIds,
-      productId,
-    });
+    matchMutation.mutate({ items: unmatchedItems, productId });
   };
 
   return (
@@ -525,7 +482,7 @@ export function PromoterDashboardPage() {
               Current raw name: <span className="font-medium">{editingProduct.label}</span>
             </p>
             <p className="text-xs text-slate-500">
-              Reports containing this name: {affectedReportIds.length}
+              Unmatched lines in this column: {unmatchedItems.length}
             </p>
             {matchMutation.isPending && (
               <p className="mt-1 text-xs font-medium text-indigo-600">Matching…</p>

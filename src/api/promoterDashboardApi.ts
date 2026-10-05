@@ -9,11 +9,18 @@ export interface PromoterDashboardProduct {
   is_gift: boolean;
 }
 
+export interface PromoterUnmatchedItem {
+  id: string;
+  type: 'promoter_sale' | 'promoter_sample';
+  raw_name: string;
+}
+
 export interface PromoterDashboardCell {
   quantity: number;
   status: string;
   parsed_report_id: string;
-  item_id?: string | null;
+  parsed_report_ids?: string[];
+  unmatched_items?: PromoterUnmatchedItem[];
 }
 
 export interface PromoterDashboardResponse {

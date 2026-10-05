@@ -2,6 +2,7 @@ import {
   fetchUnknownSenders,
   resolveUnknownSender,
 } from '@/api/unknownSenders';
+import { getAxiosMessage } from '@/lib/utils';
 import { useUiStore } from '@/store/ui.store';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -39,6 +40,6 @@ export function useResolveUnknownSender() {
       await qc.invalidateQueries({ queryKey: ['unknown-senders-count'] });
     },
     onError: (error: Error) =>
-      addToast('error', error.message || 'Failed to resolve unknown sender'),
+      addToast('error', getAxiosMessage(error) || 'Failed to resolve unknown sender'),
   });
 }

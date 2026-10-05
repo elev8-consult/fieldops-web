@@ -22,8 +22,8 @@ import {
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
-/** The API has no /unknown-senders endpoints yet; flip once they exist. */
-const UNKNOWN_SENDERS_ENABLED = false;
+/** Needs the API's /unknown-senders endpoints to be deployed. */
+const UNKNOWN_SENDERS_ENABLED = true;
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   [

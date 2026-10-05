@@ -149,6 +149,7 @@ export function Users() {
   const [editing, setEditing] = useState<User | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [codeTarget, setCodeTarget] = useState<User | null>(null);
+  const [manualPin, setManualPin] = useState('');
   const [issuedCode, setIssuedCode] = useState<{
     user: User;
     code: string;
@@ -209,17 +210,18 @@ export function Users() {
   });
 
   const codeM = useMutation({
-    mutationFn: async (user: User) => ({
+    mutationFn: async ({ user, pin }: { user: User; pin?: string }) => ({
       user,
-      code: await generateLoginCode(user.id),
+      code: await generateLoginCode(user.id, pin),
     }),
     onSuccess: async (res) => {
       setCodeTarget(null);
+      setManualPin('');
       setIssuedCode(res);
       await qc.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (e: Error) =>
-      addToast('error', e.message || 'Could not generate code'),
+      addToast('error', getAxiosMessage(e) || 'Could not set code'),
   });
 
   const clearCodeM = useMutation({
@@ -632,7 +634,10 @@ export function Users() {
 
       <Modal
         open={Boolean(codeTarget)}
-        onClose={() => setCodeTarget(null)}
+        onClose={() => {
+          setCodeTarget(null);
+          setManualPin('');
+        }}
         title="App login code"
         footer={
           <>
@@ -652,9 +657,17 @@ export function Users() {
             )}
             <Button
               loading={codeM.isPending}
-              onClick={() => codeTarget && codeM.mutate(codeTarget)}
+              disabled={manualPin !== '' && !/^\d{4,6}$/.test(manualPin)}
+              onClick={() =>
+                codeTarget &&
+                codeM.mutate({ user: codeTarget, pin: manualPin || undefined })
+              }
             >
-              {codeTarget?.hasLoginCode ? 'Generate new code' : 'Generate code'}
+              {manualPin
+                ? 'Set this PIN'
+                : codeTarget?.hasLoginCode
+                  ? 'Generate new code'
+                  : 'Generate code'}
             </Button>
           </>
         }
@@ -662,7 +675,23 @@ export function Users() {
         <p className="text-sm text-slate-600">
           {codeTarget?.hasLoginCode
             ? `${codeTarget.fullName} already has a code. Generating a new one replaces it, and the old code stops working. Removing it switches them to WhatsApp codes.`
-            : `Generate a permanent 6-digit code ${codeTarget?.fullName ?? ''} will use to sign in to the app.`}
+            : `Set a permanent code ${codeTarget?.fullName ?? ''} will use to sign in to the app.`}
+        </p>
+        <label className="mt-4 block text-sm font-medium text-slate-700">
+          Choose a PIN (optional)
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={6}
+            value={manualPin}
+            onChange={(e) => setManualPin(e.target.value.replace(/\D/g, ''))}
+            placeholder="Leave empty for a random 6-digit code"
+            className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 font-mono tracking-widest focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          />
+        </label>
+        <p className="mt-1 text-xs text-slate-500">
+          4 to 6 digits. Repeated or sequential digits (like 1111 or 1234) are not allowed.
         </p>
       </Modal>
 
