@@ -77,6 +77,7 @@ export interface Product {
   brandId: string;
   canonicalName: string;
   sku: string | null;
+  barcode: string | null;
   flow: ProductFlow;
   unit: string | null;
   isActive: boolean;

@@ -74,6 +74,10 @@ export function normalizeProduct(raw: Record<string, unknown>): Product {
     brandId: toIdString(raw.brandId),
     canonicalName: String(raw.canonicalName ?? ''),
     sku: raw.sku != null ? String(raw.sku) : null,
+    barcode:
+      raw.barcode != null && String(raw.barcode).trim() !== ''
+        ? String(raw.barcode).trim()
+        : null,
     flow: raw.flow as Product['flow'],
     unit: raw.unit != null ? String(raw.unit) : null,
     isActive: Boolean(raw.isActive ?? true),

@@ -219,6 +219,10 @@ export function Products() {
       } else if (sortKey === 'sku') {
         av = a.sku ?? '';
         bv = b.sku ?? '';
+      } else if (sortKey === 'barcode') {
+        // Products without a barcode sort together (last when ascending).
+        av = a.barcode ?? '\uffff';
+        bv = b.barcode ?? '\uffff';
       }
       if (av < bv) return sortDir === 'asc' ? -1 : 1;
       if (av > bv) return sortDir === 'asc' ? 1 : -1;
@@ -264,6 +268,21 @@ export function Products() {
         header: 'SKU',
         sortable: true,
         render: (row) => row.sku ?? '—',
+      },
+      {
+        key: 'barcode',
+        header: 'Barcode',
+        sortable: true,
+        render: (row) =>
+          row.barcode ? (
+            <span className="font-mono text-sm tabular-nums text-slate-800">
+              {row.barcode}
+            </span>
+          ) : (
+            <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-200">
+              No barcode
+            </span>
+          ),
       },
       {
         key: 'flow',
