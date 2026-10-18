@@ -7,6 +7,7 @@ import {
   BarChart3,
   Building2,
   ClipboardCheck,
+  Images,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
@@ -74,6 +75,10 @@ export function Sidebar() {
         <NavLink to="/dashboard/merchandiser" className={navClass}>
           <LayoutGrid className="h-5 w-5 shrink-0" />
           Stock Dashboard
+        </NavLink>
+        <NavLink to="/dashboard/shelves" className={navClass}>
+          <Images className="h-5 w-5 shrink-0" />
+          Shelf pictures
         </NavLink>
 
         {!isBrandManager && (

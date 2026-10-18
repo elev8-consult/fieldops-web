@@ -40,6 +40,7 @@ const UnknownSenders = lazyPage(() => import('@/pages/admin/UnknownSenders'), (m
 const Users = lazyPage(() => import('@/pages/admin/Users'), (m) => m.Users);
 const Dashboard = lazyPage(() => import('@/pages/Dashboard'), (m) => m.Dashboard);
 const MerchandiserDashboard = lazyPage(() => import('@/pages/dashboard/MerchandiserDashboard'), (m) => m.MerchandiserDashboard);
+const ShelfPictures = lazyPage(() => import('@/pages/dashboard/ShelfPictures'), (m) => m.ShelfPictures);
 const MessageLog = lazyPage(() => import('@/pages/messages/MessageLog'), (m) => m.MessageLog);
 const PromoterDashboardPage = lazyPage(() => import('@/pages/PromoterDashboardPage'), (m) => m.PromoterDashboardPage);
 const MerchandiserReportDetail = lazyPage(() => import('@/pages/reports/MerchandiserReportDetail'), (m) => m.MerchandiserReportDetail);
@@ -88,6 +89,14 @@ function CatchAll() {
 
 function SuperAdminOnly({ children }: { children: ReactNode }) {
   const ok = useAuthStore((s) => s.hasRole('super_admin'));
+  if (!ok) return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
+function ShelfPhotosRoles({ children }: { children: ReactNode }) {
+  const ok = useAuthStore((s) =>
+    s.hasRole('super_admin', 'brand_manager', 'supervisor'),
+  );
   if (!ok) return <Navigate to="/dashboard" replace />;
   return children;
 }
@@ -166,6 +175,14 @@ export const router = createBrowserRouter([
           {
             path: 'dashboard/merchandiser',
             element: <MerchandiserDashboard />,
+          },
+          {
+            path: 'dashboard/shelves',
+            element: (
+              <ShelfPhotosRoles>
+                <ShelfPictures />
+              </ShelfPhotosRoles>
+            ),
           },
           {
             path: 'dashboard/promoter',
