@@ -17,6 +17,8 @@ interface ShelfVisit {
   regionName: string | null;
   brandId: string;
   brandName: string;
+  shelfId: string;
+  shelfIndex: number;
   visitDate: string;
   merchandiserName: string;
   beforeUrl: string | null;
@@ -110,8 +112,8 @@ export function ShelfPictures() {
         <h1 className="text-2xl font-bold text-slate-900">Shelf pictures</h1>
         <p className="mt-1 text-sm text-slate-600">
           {isBrandManager
-            ? 'Before and after pictures for your brand. Only supermarkets that have both pictures are listed.'
-            : 'Before and after pictures for every brand. Only supermarkets that have both pictures are listed.'}
+            ? 'Before and after pictures for your brand. A shelf is listed as soon as either picture is saved.'
+            : 'Before and after pictures for every brand. A shelf is listed as soon as either picture is saved.'}
         </p>
       </div>
 
@@ -174,10 +176,10 @@ export function ShelfPictures() {
         <div className="rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center">
           <Images className="mx-auto h-12 w-12 text-slate-300" />
           <h2 className="mt-3 text-lg font-semibold text-slate-900">
-            No before and after pictures in this date range
+            No shelf pictures in this date range
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            A supermarket appears here after a merchandiser has saved both pictures for a brand.
+            A shelf appears here once a merchandiser saves a before or an after picture.
           </p>
         </div>
       ) : (
@@ -191,16 +193,19 @@ export function ShelfPictures() {
                 )}
               </div>
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                {group.visits.map((visit) => (
+                {group.visits.map((visit) => {
+                  const shelfIndex = visit.shelfIndex || 1;
+                  return (
                   <article
-                    key={`${visit.outletId}-${visit.brandId}-${visit.visitDate}-${visit.merchandiserName}`}
+                    key={`${visit.outletId}-${visit.brandId}-${visit.shelfId ?? shelfIndex}-${visit.visitDate}-${visit.merchandiserName}`}
                     className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
                       <div>
                         <p className="font-semibold text-slate-900">{visit.brandName}</p>
                         <p className="text-sm text-slate-500">
-                          {formatVisitDate(visit.visitDate)} · {visit.merchandiserName}
+                          Shelf {shelfIndex} · {formatVisitDate(visit.visitDate)} ·{' '}
+                          {visit.merchandiserName}
                         </p>
                       </div>
                     </div>
@@ -212,7 +217,7 @@ export function ShelfPictures() {
                           visit.beforeUrl &&
                           setZoom({
                             src: visit.beforeUrl,
-                            label: `${visit.outletName} · ${visit.brandName} · Before`,
+                            label: `${visit.outletName} · ${visit.brandName} · Shelf ${shelfIndex} · Before`,
                           })
                         }
                       />
@@ -223,13 +228,14 @@ export function ShelfPictures() {
                           visit.afterUrl &&
                           setZoom({
                             src: visit.afterUrl,
-                            label: `${visit.outletName} · ${visit.brandName} · After`,
+                            label: `${visit.outletName} · ${visit.brandName} · Shelf ${shelfIndex} · After`,
                           })
                         }
                       />
                     </div>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             </section>
           ))}
@@ -277,7 +283,7 @@ function PhotoSlot({
         </button>
       ) : (
         <div className="flex h-52 items-center justify-center rounded-lg bg-slate-50 text-sm text-slate-400">
-          Picture unavailable
+          No picture yet
         </div>
       )}
     </div>
